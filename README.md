@@ -20,13 +20,13 @@ This plugin allows Domoticz to communicate with Luxtronik-based heat pump contro
 
 ## Installation
 
-1. **Clone the repository**:
+1. **Navigate to the Domoticz plugins directory**:
+   ```sh
+   cd /path/to/domoticz/plugins
+   ```
+2. **Clone the repository**:
    ```sh
    git clone https://github.com/Rouzax/luxtronik-domoticz-plugin.git
-   ```
-2. **Move the plugin to the Domoticz plugins directory**:
-   ```sh
-   mv luxtronik-domoticz-plugin /path/to/domoticz/plugins/luxtronik
    ```
 3. **Restart Domoticz**:
    ```sh
