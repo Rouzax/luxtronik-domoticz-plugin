@@ -1,7 +1,7 @@
 # Luxtronik plugin based on sockets
 # Author: ajarzyna, Rouzax, 2021
 """
-<plugin key="luxtronik" name="Luxtronik Heat Pump Controller" author="Rouzax" version="1.0.0">
+<plugin key="TESTluxtronik" name="_TEST_Luxtronik Heat Pump Controller" author="Rouzax" version="1.0.1">
     <description>
         <h2>Luxtronik Heat Pump Controller Plugin</h2><br/>
         <p>This plugin connects to Luxtronik-based heat pump controllers using socket communication.</p>
@@ -61,6 +61,8 @@ import struct
 import re
 import time
 import errno
+from typing import Dict, List, Optional
+from enum import Enum, auto
 
 # Debug level constants
 DEBUG_NONE = 0                   # 0000 0000 - No debugging
@@ -70,6 +72,266 @@ DEBUG_CONN = 4                   # 0000 0100 - Connection handling
 DEBUG_PROTO = 8                  # 0000 1000 - Protocol/message details
 DEBUG_DATA = 16                  # 0001 0000 - Data parsing and processing
 DEBUG_ALL = -1                   # 1111 1111 - All debugging enabled
+
+SOCKET_COMMANDS = {
+    'WRIT_PARAMS': 3002,
+    'READ_PARAMS': 3003,
+    'READ_CALCUL': 3004,
+    'READ_VISIBI': 3005
+}
+
+class Language(Enum):
+    """Supported languages"""
+    ENGLISH = auto()
+    POLISH = auto()
+    DUTCH = auto()
+
+class TranslationManager:
+    """Manages translations for the plugin"""
+    
+    def __init__(self, default_language: Language = Language.ENGLISH):
+        self._default_language = default_language
+        self._current_language = default_language
+        self._translations: Dict[str, Dict[Language, str]] = {}
+        
+    def set_language(self, language: Language) -> None:
+        """Set the current language"""
+        self._current_language = language
+        
+    def add_translation(self, key: str, translations: Dict[Language, str]) -> None:
+        """Add a translation entry"""
+        if Language.ENGLISH not in translations:
+            translations[Language.ENGLISH] = key
+        self._translations[key] = translations
+        
+    def get(self, key: str) -> str:
+        """Get translation for the current language"""
+        if key not in self._translations:
+            return key
+            
+        translations = self._translations[key]
+        if self._current_language not in translations:
+            return translations[self._default_language]
+            
+        return translations[self._current_language]
+        
+    def bulk_add_translations(self, translations_data: Dict[str, Dict[Language, str]]) -> None:
+        """Add multiple translations at once"""
+        for key, translations in translations_data.items():
+            self.add_translation(key, translations)
+
+# Initialize translation manager
+_translation_manager = TranslationManager()
+
+# Define translations
+TRANSLATIONS = {
+    'Heat supply temp': {
+        Language.POLISH: 'Temp zasilania',
+        Language.DUTCH: 'Aanvoertemp verw'
+    },
+    'Heat return temp': {
+        Language.POLISH: 'Temp powrotu',
+        Language.DUTCH: 'Retourtemp verw'
+    },
+    'Return temp target': {
+        Language.POLISH: 'Temp powr cel',
+        Language.DUTCH: 'Retourtemp doel'
+    },
+    'Outside temp': {
+        Language.POLISH: 'Temp zewn',
+        Language.DUTCH: 'Buitentemp'
+    },
+    'Outside temp avg': {
+        Language.POLISH: 'Temp zewn śred',
+        Language.DUTCH: 'Buitentemp gem'
+    },
+    'DHW temp': {
+        Language.POLISH: 'Temp cwu',
+        Language.DUTCH: 'Temp tapwater'
+    },
+    'DHW temp target': {
+        Language.POLISH: 'Temp cwu cel',
+        Language.DUTCH: 'Tapwater inst'
+    },
+    'WP source in temp': {
+        Language.POLISH: 'Temp WP źródło wej',
+        Language.DUTCH: 'WP bron in temp'
+    },
+    'WP source out temp': {
+        Language.POLISH: 'Temp WP źródło wyj',
+        Language.DUTCH: 'WP bron uit temp'
+    },
+    'MC1 temp': {
+        Language.POLISH: 'Temp OM1',
+        Language.DUTCH: 'Menggroep1 temp'
+    },
+    'MC1 temp target': {
+        Language.POLISH: 'Temp OM1 cel',
+        Language.DUTCH: 'Menggroep1 inst'
+    },
+    'MC2 temp': {
+        Language.POLISH: 'Temp OM2',
+        Language.DUTCH: 'Menggroep2 temp'
+    },
+    'MC2 temp target': {
+        Language.POLISH: 'Temp OM2 cel',
+        Language.DUTCH: 'Menggroep2 inst'
+    },
+    'Heating mode': {
+        Language.POLISH: 'Obieg grzewczy',
+        Language.DUTCH: 'Verwarmen'
+    },
+    'Hot water mode': {
+        Language.POLISH: 'Woda użytkowa',
+        Language.DUTCH: 'Warmwater'
+    },
+    'Cooling': {
+        Language.POLISH: 'Chłodzenie',
+        Language.DUTCH: 'Koeling'
+    },
+    'Automatic': {
+        Language.POLISH: 'Automatyczny',
+        Language.DUTCH: 'Automatisch'
+    },
+    '2nd heat source': {
+        Language.POLISH: 'II źr. ciepła',
+        Language.DUTCH: '2e warm.opwek'
+    },
+    'Party': {
+        Language.POLISH: 'Party',
+        Language.DUTCH: 'Party'
+    },
+    'Holidays': {
+        Language.POLISH: 'Wakacje',
+        Language.DUTCH: 'Vakantie'
+    },
+    'Off': {
+        Language.POLISH: 'Wył.',
+        Language.DUTCH: 'Uit'
+    },
+    'No requirement': {
+        Language.POLISH: 'Brak zapotrzebowania',
+        Language.DUTCH: 'Geen warmtevraag'
+    },
+    'Swimming pool mode / Photovaltaik': {
+        Language.POLISH: 'Tryb basen / Fotowoltaika',
+        Language.DUTCH: 'Zwembad / Fotovoltaïek'
+    },
+    'EVUM': {
+        Language.POLISH: 'EVU',
+        Language.DUTCH: 'EVU'
+    },
+    'Defrost': {
+        Language.POLISH: 'Rozmrażanie',
+        Language.DUTCH: 'Ontdooien'
+    },
+    'Heating external source mode': {
+        Language.POLISH: 'Ogrzewanie z zewnętrznego źródła',
+        Language.DUTCH: 'Verwarmen 2e warm.opwek'
+    },
+    'Temp +-': {
+        Language.POLISH: 'Temp +-',
+        Language.DUTCH: 'Temp +-'
+    },
+    'Working mode': {
+        Language.POLISH: 'Stan pracy',
+        Language.DUTCH: 'Bedrijfsmode'
+    },
+    'Flow': {
+        Language.POLISH: 'Przepływ',
+        Language.DUTCH: 'Debiet'
+    },
+    'Compressor freq': {
+        Language.POLISH: 'Częst sprężarki',
+        Language.DUTCH: 'Compr freq'
+    },
+    'Room temp': {
+        Language.POLISH: 'Temp pokojowa',
+        Language.DUTCH: 'Ruimtetemp act'
+    },
+    'Room temp target': {
+        Language.POLISH: 'Temp pokoj cel',
+        Language.DUTCH: 'Ruimtetemp gew'
+    },
+    'Power total': {
+        Language.POLISH: 'Pobór mocy',
+        Language.DUTCH: 'Energie totaal'
+    },
+    'Power heating': {
+        Language.POLISH: 'Pobór grz',
+        Language.DUTCH: 'Energie verw'
+    },
+    'Power DHW': {
+        Language.POLISH: 'Pobór cwu',
+        Language.DUTCH: 'Energie warmw'
+    },
+    'Heat out total': {
+        Language.POLISH: 'Moc grz razem',
+        Language.DUTCH: 'Verwarm totaal'
+    },
+    'Heat out heating': {
+        Language.POLISH: 'Moc grz ogrz',
+        Language.DUTCH: 'Verwarm verw'
+    },
+    'Heat out DHW': {
+        Language.POLISH: 'Moc grz cwu',
+        Language.DUTCH: 'Verwarm warmw'
+    },
+    'COP total': {
+        Language.POLISH: 'COP razem',
+        Language.DUTCH: 'COP totaal'
+    }
+}
+
+# Load translations
+_translation_manager.bulk_add_translations(TRANSLATIONS)
+
+def set_language(language_code: str) -> None:
+    """Set the current language based on plugin parameter"""
+    language_map = {
+        '0': Language.ENGLISH,
+        '1': Language.POLISH,
+        '2': Language.DUTCH
+    }
+    language = language_map.get(language_code, Language.ENGLISH)
+    _translation_manager.set_language(language)
+
+def translate(key: str) -> str:
+    """Get translation for a key"""
+    return _translation_manager.get(key)
+
+def translate_selector_options(options: list) -> str:
+    """
+    Translate a list of selector switch options and join them with pipes
+    
+    Args:
+        options: List of English option names
+        
+    Returns:
+        Pipe-separated string of translated options
+    """
+    return '|'.join(translate(option) for option in options)
+
+def is_translatable_key(text: str) -> bool:
+    """
+    Check if a text is a translatable key or translation value
+    
+    Args:
+        text: Text to check
+        
+    Returns:
+        bool: True if text is a translatable key or one of its translations
+    """
+    # Check if text is a direct key in translations
+    if text in _translation_manager._translations:
+        return True
+        
+    # Check if text is a translation value in any language
+    for translations in _translation_manager._translations.values():
+        if any(text == trans for trans in translations.values()):
+            return True
+            
+    return False
 
 def log_debug(message, level, current_debug_level):
     """
@@ -94,158 +356,6 @@ def log_debug(message, level, current_debug_level):
         Domoticz.Log(f"[PROTO]  {message}")
     elif level == DEBUG_DATA and (current_debug_level & DEBUG_DATA):
         Domoticz.Log(f"[DATA]   {message}")
-
-_IDS = {
-    'Heat supply temp': [
-        'Temp zasilania',
-        'Aanvoertemp verw'
-    ],
-    'Heat return temp': [
-        'Temp powrotu',
-        'Retourtemp verw'
-    ],
-    'Return temp target': [
-        'Temp powr cel',
-        'Retourtemp doel'
-    ],
-    'Outside temp': [
-        'Temp zewn',
-        'Buitentemp'
-    ],
-    'Outside temp avg': [
-        'Temp zewn śred',
-        'Buitentemp gem'
-    ],
-    'DHW temp': [
-        'Temp cwu',
-        'Temp tapwater'
-    ],
-    'DHW temp target': [
-        'Temp cwu cel',
-        'Tapwater inst'
-    ],
-    'WP source in temp': [
-        'Temp WP źródło wej',
-        'WP bron in temp'
-    ],
-    'WP source out temp': [
-        'Temp WP źródło wyj',
-        'WP bron uit temp'
-    ],
-    'MC1 temp': [
-        'Temp OM1',
-        'Menggroep1 temp'
-    ],
-    'MC1 temp target': [
-        'Temp OM1 cel',
-        'Menggroep1 inst'
-    ],
-    'MC2 temp': [
-        'Temp OM2',
-        'Menggroep2 temp'
-    ],
-    'MC2 temp target': [
-        'Temp OM2 cel',
-        'Menggroep2 inst'
-    ],
-    'Heating mode': [
-        'Obieg grzewczy',
-        'Verwarmen'
-    ],
-    'Hot water mode': [
-        'Woda użytkowa',
-        'Warmwater'
-    ],
-    'Cooling': [
-        'Chłodzenie',
-        'Koeling'
-    ],
-    'Automat.|2nd h. source|Party|Holidays|Off': [
-        'Automat.|II źr. ciepła|Party|Wakacje|Wył.',
-        'Automatisch|2e warm.opwek|Party|Vakantie|Uit',
-    ],
-    'No requirement': [
-        'Brak zapotrzebowania',
-        'Geen warmtevraag',
-    ],
-    'Swimming pool mode / Photovaltaik': [
-        'Tryb basen / Fotowoltaika',
-        'Zwembad / Fotovoltaïek'
-    ],
-    'EVUM': [
-        'EVU',
-        'EVU'
-    ],
-    'Defrost': [
-        'Rozmrażanie',
-        'Ontdooien'
-    ],
-    'Heating external source mode': [
-        'Ogrzewanie z zewnętrznego źródła',
-        'Verwarmen 2e warm.opwek'
-    ],
-    'Temp +-': [
-        'Temp +-',
-        'Temp +-'
-    ],
-    'Working mode': [
-        'Stan pracy',
-        'Bedrijfsmode'
-    ],
-    'Flow': [
-        'Przepływ',
-        'Debiet'
-    ],
-    'Compressor freq': [
-        'Częst sprężarki',
-        'Compr freq'
-    ],
-    'Room temp': [
-        'Temp pokojowa',
-        'Ruimtetemp act'
-    ],
-    'Room temp target': [
-        'Temp pokoj cel',
-        'Ruimtetemp gew'
-    ],
-    'Power total': [
-        'Pobór mocy',
-        'Energie totaal'
-    ],
-    'Power heating': [
-        'Pobór grz',
-        'Energie verw'
-    ],
-    'Power DHW': [
-        'Pobór cwu',
-        'Energie warmw'
-    ],
-    'Heat out total': [
-        'Moc grz razem',
-        'Verwarm totaal'
-    ],
-    'Heat out heating': [
-        'Moc grz ogrz',
-        'Verwarm verw'
-    ],
-    'Heat out DHW': [
-        'Moc grz cwu',
-        'Verwarm warmw'
-    ],
-    'COP total': [
-        'COP razem',
-        'COP totaal'
-    ]
-}
-
-_IDS_STR = str(_IDS)
-
-SOCKET_COMMANDS = {
-    'WRIT_PARAMS': 3002,
-    'READ_PARAMS': 3003,
-    'READ_CALCUL': 3004,
-    'READ_VISIBI': 3005
-}
 
 # Read callbacks
 def to_float(data_list: list, data_idx: int, divider: float) -> dict:
@@ -301,14 +411,24 @@ def to_cop_calculator(data_list: list, indices: int, *args) -> dict:
     return {'sValue': str(round(cop, 2))}
 
 def to_text_state(data_list: list, data_idx: int, config: list) -> dict:
-    """Converts heat pump state to text status"""
+    """
+    Converts heat pump state to text status
+    
+    Args:
+        data_list: List of data values
+        data_idx: Index of the mode value in data_list
+        config: List containing [power_idx, power_threshold]
+        
+    Returns:
+        dict: Device update parameters with translated status text
+    """
     # Operating modes based on ID_WEB_WP_BZ_akt values
     mode_names = {
-        0: ids('Heating mode'),      # heating
-        1: ids('Hot water mode'),    # hot water
-        2: ids('Swimming pool mode / Photovaltaik'),
-        3: ids('Cooling'),
-        4: ids('No requirement')     # off/no requirement
+        0: translate('Heating mode'),
+        1: translate('Hot water mode'),
+        2: translate('Swimming pool mode / Photovoltaik'),
+        3: translate('Cooling'),
+        4: translate('No requirement')
     }
     
     power_idx, power_threshold = config
@@ -321,10 +441,10 @@ def to_text_state(data_list: list, data_idx: int, config: list) -> dict:
   
     # If power consumption is below threshold, return "No requirement"
     if current_power <= power_threshold:
-        return {'nValue': 0, 'sValue': ids('No requirement')}
+        return {'nValue': 0, 'sValue': translate('No requirement')}
     
     # Map mode to text
-    state_text = mode_names.get(current_mode, ids('No requirement'))
+    state_text = mode_names.get(current_mode, translate('No requirement'))
     return {'nValue': 0, 'sValue': state_text}
 
 
@@ -344,11 +464,6 @@ def available_writes_level_with_divider(write_data_list: list, *_args,
 def level_with_divider(divider: float, *_args, Level, **_kwargs):
     """Returns level divided by divider."""	
     return int(Level / divider)
-
-
-def ids(text):
-    """Returns translated text based on language."""	
-    return _IDS[text][int(Parameters["Mode3"])-1] if int(Parameters["Mode3"]) else text
 
 
 class Field:
@@ -389,24 +504,34 @@ class BasePlugin:
         log_debug("Preparing devices list", DEBUG_BASIC, self.debug_level)
         self.available_writes = {
             -1: Field(),
-            1: Field(ids('Temp +-'), [a for a in range(-50, 51, 5)]),
-            3: Field(ids('Heating mode'), [0, 1, 2, 3, 4]),
-            4: Field(ids('Hot water mode'), [0, 1, 2, 3, 4]),
-            105: Field(ids('DHW temp target'), [a for a in range(300, 651, 5)]),
-            108: Field(ids('Cooling'), [0, 1])
+            1: Field(translate('Temp +-'), [a for a in range(-50, 51, 5)]),
+            3: Field(translate('Heating mode'), [0, 1, 2, 3, 4]),
+            4: Field(translate('Hot water mode'), [0, 1, 2, 3, 4]),
+            105: Field(translate('DHW temp target'), [a for a in range(300, 651, 5)]),
+            108: Field(translate('Cooling'), [0, 1])
         }
 
-        work_modes_mapping = [(3, ids('Heating mode')),
-                              (4, ids('Hot water mode')),
-                              (2, ids('Swimming pool mode / Photovaltaik')),
-                              (2, ids('EVUM')),
-                              (1, ids('Defrost')),
-                              (0, ids('No requirement')),
-                              (4, ids('Heating external source mode')),
-                              (1, ids('Cooling'))]
+        work_modes_mapping = [(3, translate('Heating mode')),
+                              (4, translate('Hot water mode')),
+                              (2, translate('Swimming pool mode / Photovaltaik')),
+                              (2, translate('EVUM')),
+                              (1, translate('Defrost')),
+                              (0, translate('No requirement')),
+                              (4, translate('Heating external source mode')),
+                              (1, translate('Cooling'))]
 
         hot_water_temps = '|'.join([str(a / 10) for a in self.available_writes[105].get_val()])
+        
         heating_temps = '|'.join([str(a / 10) for a in self.available_writes[1].get_val()])
+        
+        # Define selector options as separate lists
+        heating_mode_options = [
+            'Automatic',
+            '2nd heat source',
+            'Party',
+            'Holidays',
+            'Off'
+        ]
 
         self.devices_parameters_list = [
             # 0 Data group/socket command,
@@ -416,122 +541,122 @@ class BasePlugin:
             # 4 Name of the domoticz device,
             # 5 tuple(write callback, list of additional write needed data (conversion, indexes))
             ['READ_CALCUL', 10, (to_float, 10),
-             dict(TypeName='Temperature', Used=1), ids('Heat supply temp')],
+             dict(TypeName='Temperature', Used=1), translate('Heat supply temp')],
 
             ['READ_CALCUL', 11, (to_float, 10),
-             dict(TypeName='Temperature', Used=1), ids('Heat return temp')],
+             dict(TypeName='Temperature', Used=1), translate('Heat return temp')],
 
             ['READ_CALCUL', 12, (to_float, 10),
-             dict(TypeName='Temperature', Used=1), ids('Return temp target')],
+             dict(TypeName='Temperature', Used=1), translate('Return temp target')],
 
             ['READ_CALCUL', 15, (to_float, 10),
-             dict(TypeName='Temperature', Used=1), ids('Outside temp')],
+             dict(TypeName='Temperature', Used=1), translate('Outside temp')],
 
             ['READ_CALCUL', 16, (to_float, 10),
-             dict(TypeName='Temperature', Used=0), ids('Outside temp avg')],
+             dict(TypeName='Temperature', Used=0), translate('Outside temp avg')],
 
             ['READ_CALCUL', 17, (to_float, 10),
-             dict(TypeName='Temperature', Used=1), ids('DHW temp')],
+             dict(TypeName='Temperature', Used=1), translate('DHW temp')],
 
             ['READ_PARAMS', 105, (to_float, 10),
-            dict(Type=242, Subtype=1, Used=0), ids('DHW temp target'), (level_with_divider, 1/10)],
+            dict(Type=242, Subtype=1, Used=0), translate('DHW temp target'), (level_with_divider, 1/10)],
 
             ['READ_CALCUL', 19, (to_float, 10),
-             dict(TypeName='Temperature', Used=1), ids('WP source in temp')],
+             dict(TypeName='Temperature', Used=1), translate('WP source in temp')],
 
             ['READ_CALCUL', 20, (to_float, 10),
-             dict(TypeName='Temperature', Used=1), ids('WP source out temp')],
+             dict(TypeName='Temperature', Used=1), translate('WP source out temp')],
 
             ['READ_CALCUL', 21, (to_float, 10),
-             dict(TypeName='Temperature', Used=0), ids('MC1 temp')],
+             dict(TypeName='Temperature', Used=0), translate('MC1 temp')],
 
             ['READ_CALCUL', 22, (to_float, 10),
-             dict(TypeName='Temperature', Used=0), ids('MC1 temp target')],
+             dict(TypeName='Temperature', Used=0), translate('MC1 temp target')],
             
             ['READ_CALCUL', 24, (to_float, 10),
-             dict(TypeName='Temperature', Used=0), ids('MC2 temp')],
+             dict(TypeName='Temperature', Used=0), translate('MC2 temp')],
 
             ['READ_CALCUL', 25, (to_float, 10),
-             dict(TypeName='Temperature', Used=0), ids('MC2 temp target')],
+             dict(TypeName='Temperature', Used=0), translate('MC2 temp target')],
 
             ['READ_PARAMS', 3, (selector_switch_level_mapping, self.available_writes[3].get_val()),
-             dict(TypeName='Selector Switch', Image=7, Used=1,
-                  Options={'LevelActions': '|||||',
-                           'LevelNames': ids('Automat.|2nd h. source|Party|Holidays|Off'),
-                           'LevelOffHidden': 'false',
-                           'SelectorStyle': '1'}),
-             ids('Heating mode'), (available_writes_level_with_divider, [10, 3])],
+            dict(TypeName='Selector Switch', Image=7, Used=1,
+                Options={'LevelActions': '|' * len(heating_mode_options),
+                        'LevelNames': translate_selector_options(heating_mode_options),
+                        'LevelOffHidden': 'false',
+                        'SelectorStyle': '1'}),
+            translate('Heating mode'), (available_writes_level_with_divider, [10, 3])],
 
             ['READ_PARAMS', 4, (selector_switch_level_mapping, self.available_writes[4].get_val()),
-             dict(TypeName='Selector Switch', Image=7, Used=1,
-                  Options={'LevelActions': '|||||',
-                           'LevelNames': ids('Automat.|2nd h. source|Party|Holidays|Off'),
-                           'LevelOffHidden': 'false',
-                           'SelectorStyle': '1'}),
-             ids('Hot water mode'), (available_writes_level_with_divider, [10, 4])],
+            dict(TypeName='Selector Switch', Image=7, Used=1,
+                Options={'LevelActions': '|' * len(heating_mode_options),  # Reuse same options
+                        'LevelNames': translate_selector_options(heating_mode_options),
+                        'LevelOffHidden': 'false',
+                        'SelectorStyle': '1'}),
+            translate('Hot water mode'), (available_writes_level_with_divider, [10, 4])],
 
             ['READ_PARAMS', 108, [to_number],
-             dict(TypeName='Switch', Image=9, Used=0), ids('Cooling'), [command_to_number]],
+             dict(TypeName='Switch', Image=9, Used=0), translate('Cooling'), [command_to_number]],
 
             ['READ_PARAMS', 1, (to_float, 10),
-             dict(Type=242, Subtype=1, Used=0), ids('Temp +-'), (level_with_divider, 1/10)],
+             dict(Type=242, Subtype=1, Used=0), translate('Temp +-'), (level_with_divider, 1/10)],
 
             ['READ_CALCUL', 80, (to_text_state, [268, 0.1]),
-             dict(TypeName='Text', Used=1), ids('Working mode')],
+             dict(TypeName='Text', Used=1), translate('Working mode')],
 
             ['READ_CALCUL', 173, (to_float, 1),
-             dict(TypeName='Custom', Used=1, Options={'Custom': '1;l/h'}), ids('Flow')],
+             dict(TypeName='Custom', Used=1, Options={'Custom': '1;l/h'}), translate('Flow')],
 
             ['READ_CALCUL', 231, (to_float, 1),
-             dict(TypeName='Custom', Used=1, Options={'Custom': '1;Hz'}), ids('Compressor freq')],
+             dict(TypeName='Custom', Used=1, Options={'Custom': '1;Hz'}), translate('Compressor freq')],
 
             ['READ_CALCUL', 227, (to_float, 10),
-             dict(TypeName='Temperature', Used=0), ids('Room temp')],
+             dict(TypeName='Temperature', Used=0), translate('Room temp')],
 
             ['READ_CALCUL', 228, (to_float, 10),
-             dict(TypeName='Temperature', Used=0), ids('Room temp target')],
+             dict(TypeName='Temperature', Used=0), translate('Room temp target')],
             
             # Power consumption
             ['READ_CALCUL', 268, (to_instant_power, [268]),
              dict(TypeName='kWh', Used=1,
                   Options={'EnergyMeterMode': '1'}),
-             ids('Power total')],
+             translate('Power total')],
 
             # Power consumption for heating mode
             ['READ_CALCUL', 268, (to_instant_power_split, [80, [0]]),
              dict(TypeName='kWh', Used=1,
                   Options={'EnergyMeterMode': '1'}),
-             ids('Power heating')],
+             translate('Power heating')],
 
             # Power consumption for hot water mode
             ['READ_CALCUL', 268, (to_instant_power_split, [80, [1]]),
              dict(TypeName='kWh', Used=1,
                   Options={'EnergyMeterMode': '1'}),
-             ids('Power DHW')],
+             translate('Power DHW')],
 
             # Heat output total
             ['READ_CALCUL', 257, (to_instant_power, [257]),
              dict(TypeName='kWh', Switchtype=4, Image=15, Used=1,
                   Options={'EnergyMeterMode': '1'}),
-             ids('Heat out total')],
+             translate('Heat out total')],
 
             # Heat output heating mode
             ['READ_CALCUL', 257, (to_instant_power_split, [80, [0]]),
              dict(TypeName='kWh', Switchtype=4, Image=15, Used=1,
                   Options={'EnergyMeterMode': '1'}),
-             ids('Heat out heating')],
+             translate('Heat out heating')],
 
             # Heat output hot water mode
             ['READ_CALCUL', 257, (to_instant_power_split, [80, [1]]),
              dict(TypeName='kWh', Switchtype=4, Image=15, Used=1,
                   Options={'EnergyMeterMode': '1'}),
-             ids('Heat out DHW')],
+             translate('Heat out DHW')],
 
             # COP calculated over total
             ['READ_CALCUL', 257, (to_cop_calculator, [257, 268]),
              dict(TypeName='Custom', Used=1,
                   Options={'Custom': '1;COP'}),
-             ids('COP total')],
+             translate('COP total')],
         ]
 
         class Unit:
@@ -859,8 +984,6 @@ class BasePlugin:
             # Set debug level
             self.debug_level = int(Parameters["Mode6"])
             
-            # We no longer need to call Domoticz.Debugging()
-            # Just start logging if debug is enabled
             if self.debug_level != DEBUG_NONE:
                 # Log which debug categories are enabled
                 debug_categories = []
@@ -880,6 +1003,11 @@ class BasePlugin:
                 log_debug("Debug logging enabled with level: " + str(self.debug_level), DEBUG_BASIC, self.debug_level)
                 log_debug("Enabled debug categories: " + ", ".join(debug_categories), DEBUG_BASIC, self.debug_level)
                 dump_config_to_log()
+                
+            # Initialize translation system
+            log_debug("Initializing translation system", DEBUG_BASIC, self.debug_level)
+            set_language(Parameters["Mode3"])
+            log_debug(f"Language set to: {Parameters['Mode3']}", DEBUG_BASIC, self.debug_level)
 
             # Initialize basic parameters
             log_debug("Initializing plugin parameters", DEBUG_BASIC, self.debug_level)
@@ -1087,11 +1215,15 @@ def update_device(Unit: int = None, nValue: int = None, sValue: str = None, Imag
             'Color': (Color, device.Color)
         }
 
-        # Process name separately due to special formatting
+        # Process name separately
         if Name is not None and Name != device.Name:
-            if bool(re.search(device.Name.replace(
-                f"{Parameters['Name']} - " if f"{Parameters['Name']} - " in device.Name else "", 
-                ""), _IDS_STR)):
+            # Strip the plugin name prefix if it exists
+            current_name = device.Name
+            if f"{Parameters['Name']} - " in current_name:
+                current_name = current_name.replace(f"{Parameters['Name']} - ", "")
+            
+            # Check if the name is a translatable key
+            if is_translatable_key(current_name):
                 new_name = f"{Parameters['Name']} - {Name}"
                 log_debug(f"  Updating name to: {new_name}", DEBUG_DEVICE, _plugin.debug_level)
                 largs["Name"] = new_name
