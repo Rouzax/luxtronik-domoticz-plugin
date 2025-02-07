@@ -580,7 +580,7 @@ class BasePlugin:
              dict(TypeName='Temperature', Used=0), translate('MC2 temp target')],
 
             ['READ_PARAMS', 3, (selector_switch_level_mapping, self.available_writes[3].get_val()),
-            dict(TypeName='Selector Switch', Image=7, Used=1,
+            dict(TypeName='Selector Switch', Image=15, Used=1,
                 Options={'LevelActions': '|' * len(heating_mode_options),
                         'LevelNames': translate_selector_options(heating_mode_options),
                         'LevelOffHidden': 'false',
@@ -588,7 +588,7 @@ class BasePlugin:
             translate('Heating mode'), (available_writes_level_with_divider, [10, 3])],
 
             ['READ_PARAMS', 4, (selector_switch_level_mapping, self.available_writes[4].get_val()),
-            dict(TypeName='Selector Switch', Image=7, Used=1,
+            dict(TypeName='Selector Switch', Image=15, Used=1,
                 Options={'LevelActions': '|' * len(heating_mode_options),  # Reuse same options
                         'LevelNames': translate_selector_options(heating_mode_options),
                         'LevelOffHidden': 'false',
@@ -596,7 +596,7 @@ class BasePlugin:
             translate('Hot water mode'), (available_writes_level_with_divider, [10, 4])],
 
             ['READ_PARAMS', 108, [to_number],
-             dict(TypeName='Switch', Image=9, Used=0), translate('Cooling'), [command_to_number]],
+             dict(TypeName='Switch', Image=16, Used=0), translate('Cooling'), [command_to_number]],
 
             ['READ_PARAMS', 1, (to_float, 10),
              dict(Type=242, Subtype=1, Used=0), translate('Temp +-'), (level_with_divider, 1/10)],
