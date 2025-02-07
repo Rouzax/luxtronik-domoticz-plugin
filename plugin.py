@@ -47,7 +47,7 @@
                 <option label="Basic + Device" value="3"/>
                 <option label="Basic + Connection" value="5"/>
                 <option label="Basic + Protocol" value="9"/>
-                <option label="Basic + Data Processing" value="17"/>  <!-- Basic + Data -->
+                <option label="Basic + Data Processing" value="17"/> 
                 <option label="All" value="-1"/>
             </options>
         </param>
@@ -483,7 +483,7 @@ class BasePlugin:
              dict(TypeName='Custom', Used=1, Options={'Custom': '1;l/h'}), ids('Flow')],
 
             ['READ_CALCUL', 231, (to_float, 1),
-             dict(TypeName='Custom', Used=0, Options={'Custom': '1;Hz'}), ids('Compressor freq')],
+             dict(TypeName='Custom', Used=1, Options={'Custom': '1;Hz'}), ids('Compressor freq')],
 
             ['READ_CALCUL', 227, (to_float, 10),
              dict(TypeName='Temperature', Used=0), ids('Room temp')],
