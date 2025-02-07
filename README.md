@@ -55,34 +55,50 @@ The following parameters are required to configure the plugin:
 The plugin creates the following devices in Domoticz:
 
 - **Temperature Sensors:**
-
   - Heat supply temperature
   - Heat return temperature
+  - Return temperature target
   - Outside temperature
+  - Outside temperature average
   - Domestic hot water (DHW) temperature
+  - DHW target temperature
+  - Heat pump source inlet temperature
+  - Heat pump source outlet temperature
   - Room temperature
+  - Room temperature target
+  - Hot gas temperature
+  - Compressor suction temperature
+  - Mixing circuit 1 temperature and target
+  - Mixing circuit 2 temperature and target
 
-- **Power Consumption:**
+- **Pressure and Refrigerant:**
+  - High pressure (bar)
+  - Low pressure (bar)
+  - Superheat value (K)
 
+- **Pump Controls:**
+  - Heating circulation pump speed (%)
+  - Brine/well circulation pump speed (%)
+
+- **Power and Performance:**
   - Total power consumption
-  - Power consumption for heating mode
-  - Power consumption for DHW mode
+  - Heating mode power consumption
+  - DHW mode power consumption
+  - Total heat output
+  - Heating mode heat output
+  - DHW mode heat output
+  - Overall system COP (Coefficient of Performance)
 
 - **Operating Modes:**
+  - Heating mode selector
+  - Hot water mode selector
+  - Cooling mode switch
+  - Working mode status
 
-  - Heating mode
-  - Hot water mode
-  - Cooling mode
-
-- **Flow and Frequency:**
-
-  - Flow rate sensor
-  - Compressor frequency
-
-- **Performance Indicators:**
-
-  - Coefficient of Performance (COP)
-  - Heat output for heating and DHW
+- **System Metrics:**
+  - Flow rate (l/h)
+  - Compressor frequency (Hz)
+  - Temperature offset adjustment
 
 ## Debugging
 
@@ -99,9 +115,9 @@ These can be adjusted in the plugin settings within Domoticz.
 
 ## Troubleshooting
 
-- Ensure the Luxtronik controller is reachable from the Domoticz server.
-- Verify the correct IP address and port are entered in the plugin configuration.
-- Check the Domoticz logs (`Setup` > `Log`) for any error messages.
+- Ensure the Luxtronik controller is reachable from the Domoticz server
+- Verify the correct IP address and port are entered in the plugin configuration
+- Check the Domoticz logs (`Setup` > `Log`) for any error messages
 
 ## Contributing
 
@@ -110,4 +126,3 @@ Contributions are welcome! If you find any issues or have feature requests, feel
 ## License
 
 This project is licensed under the MIT License. See the `LICENSE` file for details.
-
