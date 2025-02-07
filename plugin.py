@@ -1,5 +1,5 @@
 # Luxtronik plugin based on sockets
-# Author: ajarzyna, Rouzax, 2021
+# Author: ajarzyna, Rouzax, 2025
 """
 <plugin key="TESTluxtronik" name="_TEST_Luxtronik Heat Pump Controller" author="Rouzax" version="1.0.1">
     <description>
@@ -61,6 +61,7 @@ import struct
 import re
 import time
 import errno
+from translations import Language, TRANSLATIONS
 from typing import Dict, List, Optional
 from enum import Enum, auto
 
@@ -119,172 +120,6 @@ SOCKET_COMMANDS = {
     'READ_PARAMS': 3003,
     'READ_CALCUL': 3004,
     'READ_VISIBI': 3005
-}
-
-class Language(Enum):
-    """Supported languages"""
-    ENGLISH = auto()
-    POLISH = auto()
-    DUTCH = auto()
-
-# Define translations
-TRANSLATIONS = {
-    'Heat supply temp': {
-        Language.POLISH: 'Temp zasilania',
-        Language.DUTCH: 'Aanvoertemp verw'
-    },
-    'Heat return temp': {
-        Language.POLISH: 'Temp powrotu',
-        Language.DUTCH: 'Retourtemp verw'
-    },
-    'Return temp target': {
-        Language.POLISH: 'Temp powr cel',
-        Language.DUTCH: 'Retourtemp doel'
-    },
-    'Outside temp': {
-        Language.POLISH: 'Temp zewn',
-        Language.DUTCH: 'Buitentemp'
-    },
-    'Outside temp avg': {
-        Language.POLISH: 'Temp zewn śred',
-        Language.DUTCH: 'Buitentemp gem'
-    },
-    'DHW temp': {
-        Language.POLISH: 'Temp cwu',
-        Language.DUTCH: 'Temp tapwater'
-    },
-    'DHW temp target': {
-        Language.POLISH: 'Temp cwu cel',
-        Language.DUTCH: 'Tapwater inst'
-    },
-    'WP source in temp': {
-        Language.POLISH: 'Temp WP źródło wej',
-        Language.DUTCH: 'WP bron in temp'
-    },
-    'WP source out temp': {
-        Language.POLISH: 'Temp WP źródło wyj',
-        Language.DUTCH: 'WP bron uit temp'
-    },
-    'MC1 temp': {
-        Language.POLISH: 'Temp OM1',
-        Language.DUTCH: 'Menggroep1 temp'
-    },
-    'MC1 temp target': {
-        Language.POLISH: 'Temp OM1 cel',
-        Language.DUTCH: 'Menggroep1 inst'
-    },
-    'MC2 temp': {
-        Language.POLISH: 'Temp OM2',
-        Language.DUTCH: 'Menggroep2 temp'
-    },
-    'MC2 temp target': {
-        Language.POLISH: 'Temp OM2 cel',
-        Language.DUTCH: 'Menggroep2 inst'
-    },
-    'Heating mode': {
-        Language.POLISH: 'Obieg grzewczy',
-        Language.DUTCH: 'Verwarmen'
-    },
-    'Hot water mode': {
-        Language.POLISH: 'Woda użytkowa',
-        Language.DUTCH: 'Warmwater'
-    },
-    'Cooling': {
-        Language.POLISH: 'Chłodzenie',
-        Language.DUTCH: 'Koeling'
-    },
-    'Automatic': {
-        Language.POLISH: 'Automatyczny',
-        Language.DUTCH: 'Automatisch'
-    },
-    '2nd heat source': {
-        Language.POLISH: 'II źr. ciepła',
-        Language.DUTCH: '2e warm.opwek'
-    },
-    'Party': {
-        Language.POLISH: 'Party',
-        Language.DUTCH: 'Party'
-    },
-    'Holidays': {
-        Language.POLISH: 'Wakacje',
-        Language.DUTCH: 'Vakantie'
-    },
-    'Off': {
-        Language.POLISH: 'Wył.',
-        Language.DUTCH: 'Uit'
-    },
-    'No requirement': {
-        Language.POLISH: 'Brak zapotrzebowania',
-        Language.DUTCH: 'Geen warmtevraag'
-    },
-    'Swimming pool mode / Photovaltaik': {
-        Language.POLISH: 'Tryb basen / Fotowoltaika',
-        Language.DUTCH: 'Zwembad / Fotovoltaïek'
-    },
-    'EVUM': {
-        Language.POLISH: 'EVU',
-        Language.DUTCH: 'EVU'
-    },
-    'Defrost': {
-        Language.POLISH: 'Rozmrażanie',
-        Language.DUTCH: 'Ontdooien'
-    },
-    'Heating external source mode': {
-        Language.POLISH: 'Ogrzewanie z zewnętrznego źródła',
-        Language.DUTCH: 'Verwarmen 2e warm.opwek'
-    },
-    'Temp +-': {
-        Language.POLISH: 'Temp +-',
-        Language.DUTCH: 'Temp +-'
-    },
-    'Working mode': {
-        Language.POLISH: 'Stan pracy',
-        Language.DUTCH: 'Bedrijfsmode'
-    },
-    'Flow': {
-        Language.POLISH: 'Przepływ',
-        Language.DUTCH: 'Debiet'
-    },
-    'Compressor freq': {
-        Language.POLISH: 'Częst sprężarki',
-        Language.DUTCH: 'Compr freq'
-    },
-    'Room temp': {
-        Language.POLISH: 'Temp pokojowa',
-        Language.DUTCH: 'Ruimtetemp act'
-    },
-    'Room temp target': {
-        Language.POLISH: 'Temp pokoj cel',
-        Language.DUTCH: 'Ruimtetemp gew'
-    },
-    'Power total': {
-        Language.POLISH: 'Pobór mocy',
-        Language.DUTCH: 'Energie totaal'
-    },
-    'Power heating': {
-        Language.POLISH: 'Pobór grz',
-        Language.DUTCH: 'Energie verw'
-    },
-    'Power DHW': {
-        Language.POLISH: 'Pobór cwu',
-        Language.DUTCH: 'Energie warmw'
-    },
-    'Heat out total': {
-        Language.POLISH: 'Moc grz razem',
-        Language.DUTCH: 'Verwarm totaal'
-    },
-    'Heat out heating': {
-        Language.POLISH: 'Moc grz ogrz',
-        Language.DUTCH: 'Verwarm verw'
-    },
-    'Heat out DHW': {
-        Language.POLISH: 'Moc grz cwu',
-        Language.DUTCH: 'Verwarm warmw'
-    },
-    'COP total': {
-        Language.POLISH: 'COP razem',
-        Language.DUTCH: 'COP totaal'
-    }
 }
 
 # Read callbacks
@@ -522,51 +357,59 @@ class BasePlugin:
         ]
 
         self.devices_parameters_list = [
-            # 0 Data group/socket command,
-            # 1 idx in returned data,
-            # 2 tuple(data modification callback, list of additional read data (conversion, indexes, relates)),
-            # 3 Domoticz devices dictionary options,
-            # 4 Name of the domoticz device,
-            # 5 tuple(write callback, list of additional write needed data (conversion, indexes))
+            # Heat supply/flow temperature sensor
             ['READ_CALCUL', 10, (to_float, 10),
-             dict(TypeName='Temperature', Used=1), translate('Heat supply temp')],
+            dict(TypeName='Temperature', Used=1), translate('Heat supply temp')],
 
+            # Return temperature sensor from heating system
             ['READ_CALCUL', 11, (to_float, 10),
-             dict(TypeName='Temperature', Used=1), translate('Heat return temp')],
+            dict(TypeName='Temperature', Used=1), translate('Heat return temp')],
 
+            # Calculated target return temperature
             ['READ_CALCUL', 12, (to_float, 10),
-             dict(TypeName='Temperature', Used=1), translate('Return temp target')],
+            dict(TypeName='Temperature', Used=1), translate('Return temp target')],
 
+            # Outside ambient temperature sensor
             ['READ_CALCUL', 15, (to_float, 10),
-             dict(TypeName='Temperature', Used=1), translate('Outside temp')],
+            dict(TypeName='Temperature', Used=1), translate('Outside temp')],
 
+            # Average outside temperature over time
             ['READ_CALCUL', 16, (to_float, 10),
-             dict(TypeName='Temperature', Used=0), translate('Outside temp avg')],
+            dict(TypeName='Temperature', Used=0), translate('Outside temp avg')],
 
+            # Domestic hot water current temperature
             ['READ_CALCUL', 17, (to_float, 10),
-             dict(TypeName='Temperature', Used=1), translate('DHW temp')],
+            dict(TypeName='Temperature', Used=1), translate('DHW temp')],
 
+            # Domestic hot water target temperature setting
             ['READ_PARAMS', 105, (to_float, 10),
             dict(Type=242, Subtype=1, Used=0), translate('DHW temp target'), (level_with_divider, 1/10)],
 
+            # Source inlet temperature (from ground/well)
             ['READ_CALCUL', 19, (to_float, 10),
-             dict(TypeName='Temperature', Used=1), translate('WP source in temp')],
+            dict(TypeName='Temperature', Used=1), translate('WP source in temp')],
 
+            # Source outlet temperature (to ground/well)
             ['READ_CALCUL', 20, (to_float, 10),
-             dict(TypeName='Temperature', Used=1), translate('WP source out temp')],
+            dict(TypeName='Temperature', Used=1), translate('WP source out temp')],
 
+            # Mixing circuit 1 current temperature
             ['READ_CALCUL', 21, (to_float, 10),
-             dict(TypeName='Temperature', Used=0), translate('MC1 temp')],
+            dict(TypeName='Temperature', Used=0), translate('MC1 temp')],
 
+            # Mixing circuit 1 target temperature
             ['READ_CALCUL', 22, (to_float, 10),
-             dict(TypeName='Temperature', Used=0), translate('MC1 temp target')],
+            dict(TypeName='Temperature', Used=0), translate('MC1 temp target')],
             
+            # Mixing circuit 2 current temperature
             ['READ_CALCUL', 24, (to_float, 10),
-             dict(TypeName='Temperature', Used=0), translate('MC2 temp')],
+            dict(TypeName='Temperature', Used=0), translate('MC2 temp')],
 
+            # Mixing circuit 2 target temperature
             ['READ_CALCUL', 25, (to_float, 10),
-             dict(TypeName='Temperature', Used=0), translate('MC2 temp target')],
+            dict(TypeName='Temperature', Used=0), translate('MC2 temp target')],
 
+            # Heating operation mode selector switch
             ['READ_PARAMS', 3, (selector_switch_level_mapping, self.available_writes[3].get_val()),
             dict(TypeName='Selector Switch', Image=15, Used=1,
                 Options={'LevelActions': '|' * len(heating_mode_options),
@@ -575,78 +418,107 @@ class BasePlugin:
                         'SelectorStyle': '1'}),
             translate('Heating mode'), (available_writes_level_with_divider, [10, 3])],
 
+            # Hot water operation mode selector switch
             ['READ_PARAMS', 4, (selector_switch_level_mapping, self.available_writes[4].get_val()),
             dict(TypeName='Selector Switch', Image=15, Used=1,
-                Options={'LevelActions': '|' * len(heating_mode_options),  # Reuse same options
+                Options={'LevelActions': '|' * len(heating_mode_options),
                         'LevelNames': translate_selector_options(heating_mode_options),
                         'LevelOffHidden': 'false',
                         'SelectorStyle': '1'}),
             translate('Hot water mode'), (available_writes_level_with_divider, [10, 4])],
 
+            # Cooling mode enable/disable switch
             ['READ_PARAMS', 108, [to_number],
-             dict(TypeName='Switch', Image=16, Used=0), translate('Cooling'), [command_to_number]],
+            dict(TypeName='Switch', Image=16, Used=0), translate('Cooling'), [command_to_number]],
 
+            # Temperature offset adjustment
             ['READ_PARAMS', 1, (to_float, 10),
-             dict(Type=242, Subtype=1, Used=0), translate('Temp +-'), (level_with_divider, 1/10)],
+            dict(Type=242, Subtype=1, Used=0), translate('Temp +-'), (level_with_divider, 1/10)],
 
+            # Current operating mode status text
             ['READ_CALCUL', 80, (to_text_state, [268, 0.1]),
-             dict(TypeName='Text', Used=1), translate('Working mode')],
+            dict(TypeName='Text', Used=1), translate('Working mode')],
 
+            # System flow rate measurement
             ['READ_CALCUL', 173, (to_float, 1),
-             dict(TypeName='Custom', Used=1, Options={'Custom': '1;l/h'}), translate('Flow')],
+            dict(TypeName='Custom', Used=1, Options={'Custom': '1;l/h'}), translate('Flow')],
 
+            # Compressor frequency/speed
             ['READ_CALCUL', 231, (to_float, 1),
-             dict(TypeName='Custom', Used=1, Options={'Custom': '1;Hz'}), translate('Compressor freq')],
+            dict(TypeName='Custom', Used=1, Options={'Custom': '1;Hz'}), translate('Compressor freq')],
 
+            # Room temperature sensor reading
             ['READ_CALCUL', 227, (to_float, 10),
-             dict(TypeName='Temperature', Used=0), translate('Room temp')],
+            dict(TypeName='Temperature', Used=0), translate('Room temp')],
 
+            # Room temperature setpoint
             ['READ_CALCUL', 228, (to_float, 10),
-             dict(TypeName='Temperature', Used=0), translate('Room temp target')],
+            dict(TypeName='Temperature', Used=0), translate('Room temp target')],
             
-            # Power consumption
+            # Total electrical power consumption
             ['READ_CALCUL', 268, (to_instant_power, [268]),
-             dict(TypeName='kWh', Used=1,
-                  Options={'EnergyMeterMode': '1'}),
-             translate('Power total')],
+            dict(TypeName='kWh', Used=1, Options={'EnergyMeterMode': '1'}),
+            translate('Power total')],
 
-            # Power consumption for heating mode
+            # Heating mode electrical power consumption
             ['READ_CALCUL', 268, (to_instant_power_split, [80, [0]]),
-             dict(TypeName='kWh', Used=1,
-                  Options={'EnergyMeterMode': '1'}),
-             translate('Power heating')],
+            dict(TypeName='kWh', Used=1, Options={'EnergyMeterMode': '1'}),
+            translate('Power heating')],
 
-            # Power consumption for hot water mode
+            # Hot water mode electrical power consumption
             ['READ_CALCUL', 268, (to_instant_power_split, [80, [1]]),
-             dict(TypeName='kWh', Used=1,
-                  Options={'EnergyMeterMode': '1'}),
-             translate('Power DHW')],
+            dict(TypeName='kWh', Used=1, Options={'EnergyMeterMode': '1'}),
+            translate('Power DHW')],
 
-            # Heat output total
+            # Total heat output power
             ['READ_CALCUL', 257, (to_instant_power, [257]),
-             dict(TypeName='kWh', Switchtype=4, Image=15, Used=1,
-                  Options={'EnergyMeterMode': '1'}),
-             translate('Heat out total')],
+            dict(TypeName='kWh', Switchtype=4, Image=15, Used=1, Options={'EnergyMeterMode': '1'}),
+            translate('Heat out total')],
 
-            # Heat output heating mode
+            # Heating mode heat output power
             ['READ_CALCUL', 257, (to_instant_power_split, [80, [0]]),
-             dict(TypeName='kWh', Switchtype=4, Image=15, Used=1,
-                  Options={'EnergyMeterMode': '1'}),
-             translate('Heat out heating')],
+            dict(TypeName='kWh', Switchtype=4, Image=15, Used=1, Options={'EnergyMeterMode': '1'}),
+            translate('Heat out heating')],
 
-            # Heat output hot water mode
+            # Hot water mode heat output power
             ['READ_CALCUL', 257, (to_instant_power_split, [80, [1]]),
-             dict(TypeName='kWh', Switchtype=4, Image=15, Used=1,
-                  Options={'EnergyMeterMode': '1'}),
-             translate('Heat out DHW')],
+            dict(TypeName='kWh', Switchtype=4, Image=15, Used=1, Options={'EnergyMeterMode': '1'}),
+            translate('Heat out DHW')],
 
-            # COP calculated over total
+            # Overall system COP (Coefficient of Performance)
             ['READ_CALCUL', 257, (to_cop_calculator, [257, 268]),
-             dict(TypeName='Custom', Used=1,
-                  Options={'Custom': '1;COP'}),
-             translate('COP total')],
-        ]
+            dict(TypeName='Custom', Used=1, Options={'Custom': '1;COP'}),
+            translate('COP total')],
+            
+            # Heating circulation pump speed percentage
+            ['READ_CALCUL', 241, (to_float, 1),
+            dict(TypeName='Percentage', Used=1), translate('Heating pump speed')],
 
+            # Brine/well circulation pump speed percentage
+            ['READ_CALCUL', 183, (to_float, 1),
+            dict(TypeName='Percentage', Used=1), translate('Brine pump speed')],
+            
+            # Hot gas temperature monitoring
+            ['READ_CALCUL', 14, (to_float, 10),
+            dict(TypeName='Temperature', Used=1), translate('Hot gas temp')],
+
+            # Compressor suction temperature
+            ['READ_CALCUL', 13, (to_float, 10),
+            dict(TypeName='Temperature', Used=1), translate('Suction temp')],
+
+            # Superheat monitoring
+            ['READ_CALCUL', 178, (to_float, 10),
+            dict(TypeName='Custom', Used=1, Options={'Custom': '1;K'}), translate('Superheat')],
+
+            # High pressure monitoring
+            ['READ_CALCUL', 180, (to_float, 100),
+            dict(TypeName='Custom', Used=1, Options={'Custom': '1;bar'}), translate('High pressure')],
+
+            # Low pressure monitoring
+            ['READ_CALCUL', 181, (to_float, 100),
+            dict(TypeName='Custom', Used=1, Options={'Custom': '1;bar'}), translate('Low pressure')],            
+        ]
+        
         class Unit:
             def __init__(self, domoticz_id, message, address, read_conversion, dev_params, name, write_conversion=None):
                 self.id = domoticz_id
