@@ -75,32 +75,44 @@ DEBUG_ALL = -1                   # 1111 1111 - All debugging enabled
 
 def log_debug(message, level, current_debug_level):
     """
-    Log debug messages based on debug level.
-    Global _plugin might not be initialized yet, so handle that case.
+    Log debug messages based on debug level using appropriate Domoticz log levels:
+    - Status: Normal operational messages (blue)
+    - Debug: Detailed debug information (grey)
+    - Error: Errors and exceptions (red)
     """
     try:
         if current_debug_level == DEBUG_NONE:
             return
             
-        # If DEBUG_ALL is set, log everything
+        # If DEBUG_ALL is set, log everything as Debug
         if current_debug_level == DEBUG_ALL:
-            Domoticz.Log(f"[ALL] {message}")
+            Domoticz.Debug(f"[ALL] {message}")
             return
             
-        # Handle specific debug levels
+        # Handle specific debug levels with different Domoticz log types
         if level == DEBUG_BASIC and (current_debug_level & DEBUG_BASIC):
-            Domoticz.Log(f"[BASIC]  {message}")
+            # Basic info goes to Status (blue) for better visibility
+            Domoticz.Status(f"[BASIC]  {message}")
+            
         elif level == DEBUG_DEVICE and (current_debug_level & DEBUG_DEVICE):
-            Domoticz.Log(f"[DEVICE] {message}")
+            # Device updates go to Status (blue) as they're important operational info
+            Domoticz.Status(f"[DEVICE] {message}")
+            
         elif level == DEBUG_CONN and (current_debug_level & DEBUG_CONN):
-            Domoticz.Log(f"[CONN]   {message}")
+            # Connection info goes to Debug (grey) as it's more technical
+            Domoticz.Debug(f"[CONN]   {message}")
+            
         elif level == DEBUG_PROTO and (current_debug_level & DEBUG_PROTO):
-            Domoticz.Log(f"[PROTO]  {message}")
+            # Protocol details go to Debug (grey) as they're technical details
+            Domoticz.Debug(f"[PROTO]  {message}")
+            
         elif level == DEBUG_DATA and (current_debug_level & DEBUG_DATA):
-            Domoticz.Log(f"[DATA]   {message}")
+            # Data processing goes to Debug (grey) as it's technical detail
+            Domoticz.Debug(f"[DATA]   {message}")
+            
     except Exception as e:
-        # Fallback logging if something goes wrong
-        Domoticz.Log(f"[INIT] {message}")
+        # Fallback logging if something goes wrong - use Error level for visibility
+        Domoticz.Error(f"[INIT] {message} (Logging error: {str(e)})")
 
 SOCKET_COMMANDS = {
     'WRIT_PARAMS': 3002,
@@ -666,7 +678,7 @@ class BasePlugin:
                 self.dev_lists['WRIT_PARAMS'][tmp_unit.id] = tmp_unit
 
     def create_devices(self):
-        """Create or update devices with comprehensive debug logging"""
+        """Create or update devices with consolidated logging"""
         log_debug("Starting device creation process", DEBUG_BASIC, self.debug_level)
         
         # Prepare the device list
@@ -682,28 +694,42 @@ class BasePlugin:
         
         for unit in self.units.values():
             try:
+                # Prepare parameter summary for logging
+                param_summary = []
+                if 'TypeName' in unit.dev_params:
+                    param_summary.append(f"Type: {unit.dev_params['TypeName']}")
+                if 'Options' in unit.dev_params:
+                    param_summary.append(f"Options: {unit.dev_params['Options']}")
+                if 'Switchtype' in unit.dev_params:
+                    param_summary.append(f"Switchtype: {unit.dev_params['Switchtype']}")
+                if 'Image' in unit.dev_params:
+                    param_summary.append(f"Image: {unit.dev_params['Image']}")
+                
                 if unit.id not in Devices:
                     # Creating new device
-                    log_debug(f"Creating new device: {unit.name} (ID: {unit.id})", DEBUG_DEVICE, self.debug_level)
-                    log_debug(f"Device parameters: {unit.dev_params}", DEBUG_DATA, self.debug_level)
+                    if self.debug_level == DEBUG_ALL:
+                        log_debug(f"Device {unit.id} ({unit.name}) - Creating new device [{', '.join(param_summary)}]", 
+                                DEBUG_DEVICE, self.debug_level)
+                    else:
+                        log_debug(f"Device {unit.id} ({unit.name}) - Creating new device", 
+                                DEBUG_DEVICE, self.debug_level)
                     
                     Domoticz.Device(**unit.dev_params).Create()
                     devices_created += 1
-                    
-                    log_debug(f"Successfully created device: {unit.name}", DEBUG_DEVICE, self.debug_level)
                 else:
                     # Updating existing device
-                    log_debug(f"Updating existing device: {unit.name} (ID: {unit.id})", DEBUG_DEVICE, self.debug_level)
+                    update_params = unit.dev_params.copy()
+                    update_params.pop('Used', None)  # Do not change "Used" option which can be set by user
                     
-                    # Do not change "Used" option which can be set by user
-                    update_params = unit.dev_params.copy()  # Create a copy to avoid modifying original
-                    update_params.pop('Used', None)
+                    if self.debug_level == DEBUG_ALL:
+                        log_debug(f"Device {unit.id} ({unit.name}) - Updating existing device [{', '.join(param_summary)}]", 
+                                DEBUG_DEVICE, self.debug_level)
+                    else:
+                        log_debug(f"Device {unit.id} ({unit.name}) - Updating existing device", 
+                                DEBUG_DEVICE, self.debug_level)
                     
-                    log_debug(f"Update parameters: {update_params}", DEBUG_DATA, self.debug_level)
                     update_device(**update_params)
                     devices_updated += 1
-                    
-                    log_debug(f"Successfully updated device: {unit.name}", DEBUG_DEVICE, self.debug_level)
                     
             except Exception as e:
                 error_msg = f"Error processing device {unit.name} (ID: {unit.id}): {str(e)}"
@@ -711,235 +737,109 @@ class BasePlugin:
                 Domoticz.Error(error_msg)
         
         # Log summary of device creation/update process
-        log_debug(f"Device creation complete. Created: {devices_created}, Updated: {devices_updated}, Total: {total_devices}", 
+        log_debug(f"Device creation complete - Created: {devices_created}, Updated: {devices_updated}, Total: {total_devices}", 
                 DEBUG_BASIC, self.debug_level)
 
     def initialize_connection(self):
-        """
-        Initialize socket connection with comprehensive debug logging
-        """
-        # Log connection attempt start
-        log_debug(f"Starting connection initialization to {self.host}:{self.port}", DEBUG_CONN, self.debug_level)
-
-        # Log socket creation
-        log_debug("Creating socket object", DEBUG_CONN, self.debug_level)
-        self.active_connection = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-
-        # Set socket options if needed
+        """Initialize socket connection with  logging"""
         try:
-            # Set socket timeout to prevent hanging
+            self.active_connection = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             self.active_connection.settimeout(5)
-            log_debug("Socket timeout set to 5 seconds", DEBUG_PROTO, self.debug_level)
-
-            # Attempt connection
-            log_debug(f"Attempting connection to {self.host}:{self.port}...", DEBUG_CONN, self.debug_level)
-            start_time = time.time()
             self.active_connection.connect((self.host, int(self.port)))
-            connect_time = time.time() - start_time
-
-            # Log successful connection with timing
-            log_debug(f"Connection established successfully in {connect_time:.2f}s", DEBUG_CONN, self.debug_level)
-            log_debug(f"Socket details - Local: {self.active_connection.getsockname()}, Remote: {self.active_connection.getpeername()}", DEBUG_CONN, self.debug_level)
-
+            
+            if self.debug_level == DEBUG_ALL:
+                log_debug(f"Connected to {self.host}:{self.port} (Local: {self.active_connection.getsockname()})", 
+                        DEBUG_CONN, self.debug_level)
             return True
-
-        except socket.timeout as timeout_err:
-            error_msg = f"Connection timed out after 5s: {str(timeout_err)}"
-            log_debug(error_msg, DEBUG_CONN, self.debug_level)
-            Domoticz.Error(error_msg)
-
-        except socket.gaierror as dns_err:
-            error_msg = f"DNS resolution failed for {self.host}: {str(dns_err)}"
-            log_debug(error_msg, DEBUG_CONN, self.debug_level)
-            Domoticz.Error(error_msg)
-
-        except OSError as os_err:
-            error_msg = f"Connection failed to {self.host}:{self.port} - {str(os_err)}"
-            log_debug(error_msg, DEBUG_CONN, self.debug_level)
-            Domoticz.Error(error_msg)
-
-            # Additional debug info for specific error codes
-            if os_err.errno == errno.ECONNREFUSED:
-                log_debug("Connection was actively refused by the host", DEBUG_CONN, self.debug_level)
-            elif os_err.errno == errno.ENETUNREACH:
-                log_debug("Network is unreachable", DEBUG_CONN, self.debug_level)
-
         except Exception as e:
-            error_msg = f"Unexpected error during connection: {str(e)}"
+            error_msg = f"Connection failed to {self.host}:{self.port}: {str(e)}"
             log_debug(error_msg, DEBUG_CONN, self.debug_level)
             Domoticz.Error(error_msg)
-
-        # Only close connection on error
-        if hasattr(self, 'active_connection') and self.active_connection and not self.active_connection._closed:
-            log_debug("Cleaning up socket after failed connection", DEBUG_CONN, self.debug_level)
-            self.active_connection.close()
-            self.active_connection = None
-
-        return False
+            
+            if hasattr(self, 'active_connection') and self.active_connection:
+                self.active_connection.close()
+                self.active_connection = None
+            return False
 
     def send_message(self, command, address, value):
-        """
-        Send message to heat pump with comprehensive debug logging and error handling
-        """
-        # Log message details
-        log_debug(f"Preparing to send message:", DEBUG_PROTO, self.debug_level)
-        log_debug(f"  Command: {command} ({SOCKET_COMMANDS.get(command, 'Unknown')})", DEBUG_PROTO, self.debug_level)
-        log_debug(f"  Address: {address}", DEBUG_PROTO, self.debug_level)
-        log_debug(f"  Value: {value}", DEBUG_PROTO, self.debug_level)
-
+        """Send message to heat pump with logging"""
         try:
-            # Send command
-            log_debug(f"Sending command packet: {command}", DEBUG_PROTO, self.debug_level)
+            if self.debug_level == DEBUG_ALL:
+                log_debug(f"Sending {list(SOCKET_COMMANDS.keys())[list(SOCKET_COMMANDS.values()).index(command)]} command", 
+                        DEBUG_PROTO, self.debug_level)
+            
+            # Send command and address
             self.active_connection.send(struct.pack('!i', command))
-
-            # Send address
-            log_debug(f"Sending address packet: {address}", DEBUG_PROTO, self.debug_level)
             self.active_connection.send(struct.pack('!i', address))
 
             # Handle write parameters
             if command == SOCKET_COMMANDS['WRIT_PARAMS']:
-                log_debug(f"Sending address packet: {address}", DEBUG_PROTO, self.debug_level)
                 self.active_connection.send(struct.pack('!i', value))
 
-            # Receive and verify command echo
+            # Verify command echo
             received_command = struct.unpack('!i', self.active_connection.recv(4))[0]
             if received_command != command:
-                error_msg = f"Command verification failed. Sent: {command}, Received: {received_command}"
-                log_debug(error_msg, DEBUG_PROTO, self.debug_level)
-                Domoticz.Error(error_msg)
-                return None
+                raise Exception(f"Command verification failed: sent {command}, received {received_command}")
 
-            length = 0
-            stat = 0
+            # Process response based on command type
+            length = stat = 0
             data_list = []
 
-            # Handle different command types
             if command == SOCKET_COMMANDS['READ_PARAMS']:
                 length = struct.unpack('!i', self.active_connection.recv(4))[0]
-                log_debug(f"READ_PARAMS - Expecting {length} parameters", DEBUG_PROTO, self.debug_level)
-
             elif command == SOCKET_COMMANDS['READ_CALCUL']:
                 stat = struct.unpack('!i', self.active_connection.recv(4))[0]
                 length = struct.unpack('!i', self.active_connection.recv(4))[0]
-                log_debug(f"READ_CALCUL - Status: {stat}, Expecting {length} values", DEBUG_PROTO, self.debug_level)
 
-            elif command == SOCKET_COMMANDS['READ_VISIBI']:
-                log_debug("READ_VISIBI command - No data expected", DEBUG_PROTO, self.debug_level)
-
-            elif command == SOCKET_COMMANDS['WRIT_PARAMS']:
-                log_debug("WRIT_PARAMS command completed", DEBUG_PROTO, self.debug_level)
-
-            # Read data if length > 0
+            # Read data if expected
             if length > 0:
-                log_debug(f"Reading {length} data values...", DEBUG_DATA, self.debug_level)
-                for i in range(length):
-                    value = struct.unpack('!i', self.active_connection.recv(4))[0]
-                    data_list.append(value)
-                    # log_debug(f"Read value {i+1}/{length}: {value}", DEBUG_DATA, self.debug_level)
+                data_list = [struct.unpack('!i', self.active_connection.recv(4))[0] for _ in range(length)]
 
             return command, stat, length, data_list
 
         except Exception as e:
-            error_msg = f"Unexpected error in send_message: {str(e)}"
+            error_msg = f"Message send failed: {str(e)}"
             log_debug(error_msg, DEBUG_PROTO, self.debug_level)
             Domoticz.Error(error_msg)
             return None
 
     def process_socket_message(self, command='READ_PARAMS', address=0, value=0):
-        """
-        Process and validate socket messages with comprehensive error handling and debugging
-        """
-        log_debug(f"Processing socket message:", DEBUG_PROTO, self.debug_level)
-        log_debug(f"  Command: {command}", DEBUG_PROTO, self.debug_level)
-        log_debug(f"  Address: {address}", DEBUG_PROTO, self.debug_level)
-        log_debug(f"  Value: {value}", DEBUG_PROTO, self.debug_level)
+        """Process socket messages with logging"""
+        try:
+            # Validate command and parameters
+            if command not in SOCKET_COMMANDS:
+                raise ValueError(f"Invalid command: {command}")
 
-        # Validate command
-        if command not in SOCKET_COMMANDS:
-            error_msg = f"Invalid command: {command}. Valid commands: {list(SOCKET_COMMANDS.keys())}"
+            if command == 'WRIT_PARAMS':
+                if value not in self.available_writes[address].get_val():
+                    raise ValueError(f"Invalid value for {self.available_writes[address].get_name()}: {value}")
+            else:
+                address = value = 0
+
+            # Attempt communication with retries
+            for attempt in range(2):
+                try:
+                    if self.initialize_connection():
+                        result = self.send_message(SOCKET_COMMANDS[command], address, value)
+                        if result:
+                            if self.debug_level == DEBUG_ALL:
+                                log_debug(f"{command}: Received {result[2]} values", DEBUG_PROTO, self.debug_level)
+                            return result
+                except socket.error as e:
+                    if attempt == 0:  # Only log first attempt failure
+                        log_debug(f"Socket error (retrying): {str(e)}", DEBUG_CONN, self.debug_level)
+                finally:
+                    if self.active_connection:
+                        self.active_connection.close()
+                        self.active_connection = None
+
+            raise Exception(f"Failed after 2 attempts")
+
+        except Exception as e:
+            error_msg = f"Socket message processing failed: {str(e)}"
             log_debug(error_msg, DEBUG_PROTO, self.debug_level)
             Domoticz.Error(error_msg)
             return command, 0, 0, []
-
-        # Handle write parameters validation
-        if command == 'WRIT_PARAMS':
-            try:
-                available_values = self.available_writes[address].get_val()
-                param_name = self.available_writes[address].get_name()
-
-                log_debug(f"Validating write parameter:", DEBUG_DATA, self.debug_level)
-                log_debug(f"  Parameter: {param_name}", DEBUG_DATA, self.debug_level)
-                log_debug(f"  Available values: {available_values}", DEBUG_DATA, self.debug_level)
-                log_debug(f"  Requested value: {value}", DEBUG_DATA, self.debug_level)
-
-                if value not in available_values:
-                    error_msg = (f"Invalid value for parameter '{param_name}': {value}. "
-                            f"Must be one of: {available_values}")
-                    log_debug(error_msg, DEBUG_DATA, self.debug_level)
-                    Domoticz.Error(error_msg)
-                    return command, 0, 0, []
-
-            except KeyError:
-                error_msg = f"Invalid write parameter address: {address}"
-                log_debug(error_msg, DEBUG_PROTO, self.debug_level)
-                Domoticz.Error(error_msg)
-                return command, 0, 0, []
-        else:
-            # Reset address and value for non-write commands
-            log_debug("Non-write command, resetting address and value to 0", DEBUG_PROTO, self.debug_level)
-            address = 0
-            value = 0
-
-        # Attempt to send message
-        retry_count = 0
-        max_retries = 2
-
-        while retry_count < max_retries:
-            try:
-                log_debug(f"Sending message (attempt {retry_count + 1}/{max_retries})", DEBUG_PROTO, self.debug_level)
-
-                # Initialize connection first
-                if not self.initialize_connection():
-                    log_debug("Failed to initialize connection", DEBUG_CONN, self.debug_level)
-                    retry_count += 1
-                    continue
-
-                # Try to send message and get response
-                result = self.send_message(SOCKET_COMMANDS[command], address, value)
-                
-                if result is not None:
-                    log_debug("Message sent and received successfully", DEBUG_CONN, self.debug_level)
-                    return result
-
-                log_debug("Received None response from send_message", DEBUG_PROTO, self.debug_level)
-
-            except socket.error as e:
-                error_msg = f"Socket error (attempt {retry_count + 1}): {str(e)}"
-                log_debug(error_msg, DEBUG_CONN, self.debug_level)
-
-            except Exception as e:
-                error_msg = f"Unexpected error processing message: {str(e)}"
-                log_debug(error_msg, DEBUG_PROTO, self.debug_level)
-                Domoticz.Error(error_msg)
-                break
-
-            finally:
-                # Always clean up the connection after each attempt
-                if hasattr(self, 'active_connection') and self.active_connection:
-                    log_debug("Closing connection", DEBUG_CONN, self.debug_level)
-                    self.active_connection.close()
-                    self.active_connection = None
-
-            retry_count += 1
-
-        # If we get here, all attempts failed
-        error_msg = f"Failed to process socket message after {max_retries} attempts"
-        log_debug(error_msg, DEBUG_PROTO, self.debug_level)
-        Domoticz.Error(error_msg)
-
-        # Return empty result
-        log_debug("Returning empty result", DEBUG_PROTO, self.debug_level)
-        return command, 0, 0, []
 
     def update(self, message):
         """Update devices for a specific message type with debug logging"""
@@ -975,27 +875,41 @@ class BasePlugin:
             Domoticz.Error(error_msg)
 
     def update_all(self):
-        """Update all device types"""
-        log_debug("Starting full update of all devices", DEBUG_BASIC, self.debug_level)
+        """Update all devices with minimal logging"""
+        if self.debug_level == DEBUG_ALL:
+            log_debug("Heartbeat update started", DEBUG_BASIC, self.debug_level)
         
         try:
-            log_debug("Updating calculated values", DEBUG_BASIC, self.debug_level)
-            self.update('READ_CALCUL')
-            
-            log_debug("Updating parameters", DEBUG_BASIC, self.debug_level)
-            self.update('READ_PARAMS')
-            
-            log_debug("Full update completed", DEBUG_BASIC, self.debug_level)
+            for command_type in ['READ_CALCUL', 'READ_PARAMS']:
+                result = self.process_socket_message(command_type)
+                if result and result[2] > 0:  # If we got data
+                    devices_updated = sum(1 for device in self.dev_lists[command_type].values() 
+                                    if self._update_device(device, result[3]))
+                    
+                    if self.debug_level == DEBUG_ALL:
+                        log_debug(f"{command_type}: Updated {devices_updated} devices", DEBUG_BASIC, self.debug_level)
         except Exception as e:
-            error_msg = f"Error in update_all method: {str(e)}"
+            error_msg = f"Update failed: {str(e)}"
             log_debug(error_msg, DEBUG_BASIC, self.debug_level)
             Domoticz.Error(error_msg)
+
+    def _update_device(self, device, data_list):
+        """Helper method to update a single device"""
+        try:
+            device.update_domoticz_dev(data_list)
+            return True
+        except Exception as e:
+            log_debug(f"Failed to update {device.name}: {str(e)}", DEBUG_DEVICE, self.debug_level)
+            return False
 
     def onStart(self):
         """Initialize plugin with corrected debug handling"""
         try:
             # Set debug level first
             self.debug_level = int(Parameters["Mode6"])
+            
+            if self.debug_level != DEBUG_NONE:
+                Domoticz.Debugging(1)  # This is still needed for Debug() messages to show
             
             if self.debug_level != DEBUG_NONE:
                 debug_categories = []
@@ -1120,8 +1034,9 @@ class BasePlugin:
             Domoticz.Error(error_msg)
 
     def onHeartbeat(self):
-        """Handle heartbeat events"""
-        log_debug("Heartbeat received - updating all devices", DEBUG_BASIC, self.debug_level)
+        """Handle heartbeat events with consolidated logging"""
+        if self.debug_level == DEBUG_ALL:
+            log_debug("Heartbeat - Starting full device update", DEBUG_BASIC, self.debug_level)
         self.update_all()
 
 
@@ -1232,100 +1147,70 @@ def update_device(Unit: int = None, nValue: int = None, sValue: str = None, Imag
                   BatteryLevel: int = None, Options: dict = None, TimedOut: int = None, Name: str = None,
                   TypeName: str = None, Type: int = None, Subtype: int = None, Switchtype: int = None,
                   Used: int = None, Description: str = None, Color: str = None):
-    """
-    Update Domoticz device with comprehensive validation and debug logging
-    """
+    """Update Domoticz device with logging"""
     # Validate device exists
     if Unit not in Devices:
         log_debug(f"Device {Unit} not found - attempting to recreate devices", DEBUG_DEVICE, _plugin.debug_level)
         _plugin.create_devices()
         if Unit not in Devices:
-            error_msg = f"Failed to create device {Unit}"
-            log_debug(error_msg, DEBUG_DEVICE, _plugin.debug_level)
-            Domoticz.Error(error_msg)
+            Domoticz.Error(f"Failed to create device {Unit}")
             return
 
-    log_debug(f"Updating device {Unit} ({Devices[Unit].Name})", DEBUG_DEVICE, _plugin.debug_level)
+    device = Devices[Unit]
+    # update_needed = False
+    largs = {"nValue": device.nValue if device.nValue is not None else 0, 
+             "sValue": str(device.sValue) if device.sValue is not None else ""}
     
-    # Build update arguments
-    largs = {}
-    update_needed = False
-
-    # Handle required parameters nValue and sValue
-    largs["nValue"] = 0
+    # Build changes summary
+    changes = []
+    
+    # Handle main values
     if nValue is not None:
-        log_debug(f"  Setting nValue: {nValue}", DEBUG_DEVICE, _plugin.debug_level)
         largs["nValue"] = nValue
-        update_needed = True
-    elif Devices[Unit].nValue is not None:
-        largs["nValue"] = Devices[Unit].nValue
-
-    largs["sValue"] = ""
+        changes.append(f"nValue: {device.nValue} → {nValue}")
+    
     if sValue is not None:
-        log_debug(f"  Setting sValue: {sValue}", DEBUG_DEVICE, _plugin.debug_level)
         largs["sValue"] = str(sValue)
-        update_needed = True
-    elif Devices[Unit].sValue is not None:
-        largs["sValue"] = str(Devices[Unit].sValue)
+        changes.append(f"sValue: {device.sValue} → {sValue}")
 
-    # Process optional parameters
-    try:
-        device = Devices[Unit]
-        
-        # Check and log each parameter update
-        param_updates = {
-            'Image': (Image, device.Image),
-            'SignalLevel': (SignalLevel, device.SignalLevel),
-            'BatteryLevel': (BatteryLevel, device.BatteryLevel),
-            'Options': (Options, device.Options),
-            'TimedOut': (TimedOut, device.TimedOut),
-            'Type': (Type, device.Type),
-            'Subtype': (Subtype, None),  # Always update if provided
-            'SwitchType': (Switchtype, getattr(device, 'SwitchType', None)),
-            'Used': (Used, device.Used),
-            'Description': (Description, device.Description),
-            'Color': (Color, device.Color)
-        }
+    # Handle other parameters
+    param_updates = {
+        'Image': (Image, device.Image),
+        'SignalLevel': (SignalLevel, device.SignalLevel),
+        'BatteryLevel': (BatteryLevel, device.BatteryLevel),
+        'Options': (Options, device.Options),
+        'TimedOut': (TimedOut, device.TimedOut),
+        'Type': (Type, device.Type),
+        'Subtype': (Subtype, None),
+        'Switchtype': (Switchtype, getattr(device, 'Switchtype', None)),
+        'Description': (Description, device.Description),
+        'Color': (Color, device.Color)
+    }
 
-        # Process name separately
-        if Name is not None and Name != device.Name:
-            # Strip the plugin name prefix if it exists
-            current_name = device.Name
-            if f"{Parameters['Name']} - " in current_name:
-                current_name = current_name.replace(f"{Parameters['Name']} - ", "")
-            
-            # Check if the name is a translatable key
-            if is_translatable_key(current_name):
-                new_name = f"{Parameters['Name']} - {Name}"
-                log_debug(f"  Updating name to: {new_name}", DEBUG_DEVICE, _plugin.debug_level)
-                largs["Name"] = new_name
-                update_needed = True
+    # Process other parameters
+    for param_name, (new_value, current_value) in param_updates.items():
+        if new_value is not None:
+            largs[param_name] = new_value
+            changes.append(f"{param_name}: {current_value} → {new_value}")
 
-        # Process other parameters
-        for param_name, (new_value, current_value) in param_updates.items():
-            if new_value is not None and new_value != current_value:
-                log_debug(f"  Updating {param_name}: {new_value}", DEBUG_DEVICE, _plugin.debug_level)
-                largs[param_name] = new_value
-                update_needed = True
-
-    except Exception as e:
-        error_msg = f"Error preparing device update parameters: {str(e)}"
-        log_debug(error_msg, DEBUG_DEVICE, _plugin.debug_level)
-        Domoticz.Error(error_msg)
-        return
+    # Process name separately to handle translation
+    if Name is not None and Name != device.Name:
+        current_name = device.Name.replace(f"{Parameters['Name']} - ", "") if f"{Parameters['Name']} - " in device.Name else device.Name
+        if is_translatable_key(current_name):
+            new_name = f"{Parameters['Name']} - {Name}"
+            largs["Name"] = new_name
+            changes.append(f"Name: {current_name} → {Name}")
 
     # Perform update if needed
-    if update_needed:
-        try:
-            log_debug(f"Updating device {Unit} with parameters: {str(largs)}", DEBUG_DEVICE, _plugin.debug_level)
-            Devices[Unit].Update(**largs)
-            log_debug(f"Device {Unit} updated successfully", DEBUG_DEVICE, _plugin.debug_level)
-        except Exception as e:
-            error_msg = f"Error updating device {Unit}: {str(e)}"
-            log_debug(error_msg, DEBUG_DEVICE, _plugin.debug_level)
-            Domoticz.Error(error_msg)
-    else:
-        log_debug(f"No updates needed for device {Unit}", DEBUG_DEVICE, _plugin.debug_level)
+    try:
+        # Single line log per device update
+        if _plugin.debug_level & DEBUG_DEVICE:
+            changes_str = ', '.join(changes) if changes else 'no changes'
+            log_debug(f"Device {Unit} ({device.Name}) - {changes_str}", DEBUG_DEVICE, _plugin.debug_level)
+        
+        Devices[Unit].Update(**largs)
+    except Exception as e:
+        Domoticz.Error(f"Error updating device {Unit}: {str(e)}")
 
 def dump_config_to_log():
     """Dump plugin configuration and device states to log with detailed formatting"""
@@ -1342,26 +1227,30 @@ def dump_config_to_log():
     
     for device_unit, device in Devices.items():
         try:
-            log_debug(f"\nDevice Unit {device_unit}:", DEBUG_BASIC, _plugin.debug_level)
-            log_debug(f"  Name:        {device.Name}", DEBUG_BASIC, _plugin.debug_level)
-            log_debug(f"  ID:          {device.ID}", DEBUG_BASIC, _plugin.debug_level)
-            log_debug(f"  Type:        {device.Type}", DEBUG_BASIC, _plugin.debug_level)
-            log_debug(f"  State:       nValue={device.nValue}, sValue={device.sValue}", DEBUG_BASIC, _plugin.debug_level)
+            # Collect all device attributes
+            device_info = {
+                'Name': device.Name,
+                'ID': device.ID,
+                'Type': device.Type,
+                'State': f"nValue={device.nValue}, sValue={device.sValue}"
+            }
             
-            # Log additional device attributes if they exist
+            # Add optional attributes if they exist and have values
             for attr in ['LastLevel', 'Image', 'SignalLevel', 'BatteryLevel', 'Used', 'Description']:
                 if hasattr(device, attr):
                     value = getattr(device, attr)
-                    if value is not None:
-                        log_debug(f"  {attr}:        {value}", DEBUG_BASIC, _plugin.debug_level)
+                    if value is not None and (not isinstance(value, str) or value.strip()):
+                        device_info[attr] = value
             
-            # Log options if they exist and are not empty
+            # Add options if they exist and aren't empty
             if hasattr(device, 'Options') and device.Options:
-                log_debug(f"  Options:     {device.Options}", DEBUG_BASIC, _plugin.debug_level)
+                device_info['Options'] = device.Options
+            
+            # Format all info into a single line
+            info_str = ', '.join(f"{k}: {v}" for k, v in device_info.items())
+            log_debug(f"Device {device_unit}: {info_str}", DEBUG_BASIC, _plugin.debug_level)
                 
         except Exception as e:
-            error_msg = f"Error dumping config for device {device_unit}: {str(e)}"
-            log_debug(error_msg, DEBUG_BASIC, _plugin.debug_level)
-            Domoticz.Error(error_msg)
+            log_debug(f"Error dumping config for device {device_unit}: {str(e)}", DEBUG_BASIC, _plugin.debug_level)
             
     log_debug("\n=== End Configuration Dump ===", DEBUG_BASIC, _plugin.debug_level)
