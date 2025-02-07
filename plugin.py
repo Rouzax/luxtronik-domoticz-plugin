@@ -73,6 +73,35 @@ DEBUG_PROTO = 8                  # 0000 1000 - Protocol/message details
 DEBUG_DATA = 16                  # 0001 0000 - Data parsing and processing
 DEBUG_ALL = -1                   # 1111 1111 - All debugging enabled
 
+def log_debug(message, level, current_debug_level):
+    """
+    Log debug messages based on debug level.
+    Global _plugin might not be initialized yet, so handle that case.
+    """
+    try:
+        if current_debug_level == DEBUG_NONE:
+            return
+            
+        # If DEBUG_ALL is set, log everything
+        if current_debug_level == DEBUG_ALL:
+            Domoticz.Log(f"[ALL] {message}")
+            return
+            
+        # Handle specific debug levels
+        if level == DEBUG_BASIC and (current_debug_level & DEBUG_BASIC):
+            Domoticz.Log(f"[BASIC]  {message}")
+        elif level == DEBUG_DEVICE and (current_debug_level & DEBUG_DEVICE):
+            Domoticz.Log(f"[DEVICE] {message}")
+        elif level == DEBUG_CONN and (current_debug_level & DEBUG_CONN):
+            Domoticz.Log(f"[CONN]   {message}")
+        elif level == DEBUG_PROTO and (current_debug_level & DEBUG_PROTO):
+            Domoticz.Log(f"[PROTO]  {message}")
+        elif level == DEBUG_DATA and (current_debug_level & DEBUG_DATA):
+            Domoticz.Log(f"[DATA]   {message}")
+    except Exception as e:
+        # Fallback logging if something goes wrong
+        Domoticz.Log(f"[INIT] {message}")
+
 SOCKET_COMMANDS = {
     'WRIT_PARAMS': 3002,
     'READ_PARAMS': 3003,
@@ -85,43 +114,6 @@ class Language(Enum):
     ENGLISH = auto()
     POLISH = auto()
     DUTCH = auto()
-
-class TranslationManager:
-    """Manages translations for the plugin"""
-    
-    def __init__(self, default_language: Language = Language.ENGLISH):
-        self._default_language = default_language
-        self._current_language = default_language
-        self._translations: Dict[str, Dict[Language, str]] = {}
-        
-    def set_language(self, language: Language) -> None:
-        """Set the current language"""
-        self._current_language = language
-        
-    def add_translation(self, key: str, translations: Dict[Language, str]) -> None:
-        """Add a translation entry"""
-        if Language.ENGLISH not in translations:
-            translations[Language.ENGLISH] = key
-        self._translations[key] = translations
-        
-    def get(self, key: str) -> str:
-        """Get translation for the current language"""
-        if key not in self._translations:
-            return key
-            
-        translations = self._translations[key]
-        if self._current_language not in translations:
-            return translations[self._default_language]
-            
-        return translations[self._current_language]
-        
-    def bulk_add_translations(self, translations_data: Dict[str, Dict[Language, str]]) -> None:
-        """Add multiple translations at once"""
-        for key, translations in translations_data.items():
-            self.add_translation(key, translations)
-
-# Initialize translation manager
-_translation_manager = TranslationManager()
 
 # Define translations
 TRANSLATIONS = {
@@ -283,80 +275,6 @@ TRANSLATIONS = {
     }
 }
 
-# Load translations
-_translation_manager.bulk_add_translations(TRANSLATIONS)
-
-def set_language(language_code: str) -> None:
-    """Set the current language based on plugin parameter"""
-    language_map = {
-        '0': Language.ENGLISH,
-        '1': Language.POLISH,
-        '2': Language.DUTCH
-    }
-    language = language_map.get(language_code, Language.ENGLISH)
-    _translation_manager.set_language(language)
-
-def translate(key: str) -> str:
-    """Get translation for a key"""
-    return _translation_manager.get(key)
-
-def translate_selector_options(options: list) -> str:
-    """
-    Translate a list of selector switch options and join them with pipes
-    
-    Args:
-        options: List of English option names
-        
-    Returns:
-        Pipe-separated string of translated options
-    """
-    return '|'.join(translate(option) for option in options)
-
-def is_translatable_key(text: str) -> bool:
-    """
-    Check if a text is a translatable key or translation value
-    
-    Args:
-        text: Text to check
-        
-    Returns:
-        bool: True if text is a translatable key or one of its translations
-    """
-    # Check if text is a direct key in translations
-    if text in _translation_manager._translations:
-        return True
-        
-    # Check if text is a translation value in any language
-    for translations in _translation_manager._translations.values():
-        if any(text == trans for trans in translations.values()):
-            return True
-            
-    return False
-
-def log_debug(message, level, current_debug_level):
-    """
-    Log debug messages based on debug level.
-    """
-    if current_debug_level == DEBUG_NONE:
-        return
-        
-    # If DEBUG_ALL is set, log everything
-    if current_debug_level == DEBUG_ALL:
-        Domoticz.Log(f"[ALL] {message}")
-        return
-        
-    # Handle specific debug levels
-    if level == DEBUG_BASIC and (current_debug_level & DEBUG_BASIC):
-        Domoticz.Log(f"[BASIC]  {message}")
-    elif level == DEBUG_DEVICE and (current_debug_level & DEBUG_DEVICE):
-        Domoticz.Log(f"[DEVICE] {message}")
-    elif level == DEBUG_CONN and (current_debug_level & DEBUG_CONN):
-        Domoticz.Log(f"[CONN]   {message}")
-    elif level == DEBUG_PROTO and (current_debug_level & DEBUG_PROTO):
-        Domoticz.Log(f"[PROTO]  {message}")
-    elif level == DEBUG_DATA and (current_debug_level & DEBUG_DATA):
-        Domoticz.Log(f"[DATA]   {message}")
-
 # Read callbacks
 def to_float(data_list: list, data_idx: int, divider: float) -> dict:
     """Convert data to float with divider"""
@@ -479,22 +397,80 @@ class Field:
 
     def get_val(self):
         return self.vales
-
+    
+class TranslationManager:
+    """Manages translations for the plugin"""
+    
+    def __init__(self, default_language: Language = Language.ENGLISH):
+        self._default_language = default_language
+        self._current_language = default_language
+        self._translations: Dict[str, Dict[Language, str]] = {}
+        self._missing_translations: set = set()
+        
+    def set_language(self, language: Language) -> None:
+        """Set the current language"""
+        self._current_language = language
+        
+    def add_translation(self, key: str, translations: Dict[Language, str]) -> None:
+        """Add a translation entry"""
+        if Language.ENGLISH not in translations:
+            translations[Language.ENGLISH] = key
+            
+        self._translations[key] = translations
+        
+    def get(self, key: str) -> str:
+        """Get translation for the current language"""
+        if key not in self._translations:
+            return key
+            
+        translations = self._translations[key]
+        if self._current_language not in translations:
+            return translations[self._default_language]
+            
+        return translations[self._current_language]
+        
+    def bulk_add_translations(self, translations_data: Dict[str, Dict[Language, str]]) -> None:
+        """Add multiple translations at once"""
+        for key, translations in translations_data.items():
+            self.add_translation(key, translations)
+            
+    def initialize_debug(self, debug_level: int) -> None:
+        """Initialize debug logging after plugin is started"""
+        for key, translations in self._translations.items():
+            # Check for missing translations for all languages
+            for lang in Language:
+                if lang not in translations:
+                    log_debug(f"Missing {lang.name} translation for key: {key}", DEBUG_BASIC, debug_level)
+                    
+        # Log translation coverage
+        self._check_translation_coverage(debug_level)
+        
+    def _check_translation_coverage(self, debug_level: int) -> None:
+        """Check and log translation coverage for current language"""
+        missing_count = 0
+        total_keys = len(self._translations)
+        
+        for key, translations in self._translations.items():
+            if self._current_language not in translations:
+                missing_count += 1
+                log_debug(f"Missing translation for '{key}' in {self._current_language.name}", DEBUG_BASIC, debug_level)
+        
+        if missing_count > 0:
+            log_debug(f"Translation coverage for {self._current_language.name}: {total_keys - missing_count}/{total_keys} ({((total_keys - missing_count)/total_keys)*100:.1f}%)", 
+                     DEBUG_BASIC, debug_level)
 class BasePlugin:
     def __init__(self):
-        # Initialize debug_level with a default value
-        self.debug_level = DEBUG_NONE  # Set to 0 by default
-        
+        self.debug_level = DEBUG_NONE
         self.active_connection = None
         self.name = None
         self.host = None
         self.port = None
-
         self.devices_parameters_list = []
-
         self.units = {}
         self.available_writes = {}
         self.dev_lists = {}
+        self.translation_manager = TranslationManager()
+        
         for command in SOCKET_COMMANDS.keys():
             self.dev_lists[command] = {}
 
@@ -690,16 +666,53 @@ class BasePlugin:
                 self.dev_lists['WRIT_PARAMS'][tmp_unit.id] = tmp_unit
 
     def create_devices(self):
+        """Create or update devices with comprehensive debug logging"""
+        log_debug("Starting device creation process", DEBUG_BASIC, self.debug_level)
+        
+        # Prepare the device list
+        log_debug("Preparing device list", DEBUG_DEVICE, self.debug_level)
         self.prepare_devices_list()
+        
+        # Log total number of devices to process
+        total_devices = len(self.units)
+        log_debug(f"Processing {total_devices} devices", DEBUG_DEVICE, self.debug_level)
+        
+        devices_created = 0
+        devices_updated = 0
+        
         for unit in self.units.values():
-            if unit.id not in Devices:
-                Domoticz.Device(**unit.dev_params).Create()
-
-            else:
-                # Do not change "Used" option which can be set by user.
-                update_params = unit.dev_params
-                update_params.pop('Used', None)
-                update_device(**update_params)
+            try:
+                if unit.id not in Devices:
+                    # Creating new device
+                    log_debug(f"Creating new device: {unit.name} (ID: {unit.id})", DEBUG_DEVICE, self.debug_level)
+                    log_debug(f"Device parameters: {unit.dev_params}", DEBUG_DATA, self.debug_level)
+                    
+                    Domoticz.Device(**unit.dev_params).Create()
+                    devices_created += 1
+                    
+                    log_debug(f"Successfully created device: {unit.name}", DEBUG_DEVICE, self.debug_level)
+                else:
+                    # Updating existing device
+                    log_debug(f"Updating existing device: {unit.name} (ID: {unit.id})", DEBUG_DEVICE, self.debug_level)
+                    
+                    # Do not change "Used" option which can be set by user
+                    update_params = unit.dev_params.copy()  # Create a copy to avoid modifying original
+                    update_params.pop('Used', None)
+                    
+                    log_debug(f"Update parameters: {update_params}", DEBUG_DATA, self.debug_level)
+                    update_device(**update_params)
+                    devices_updated += 1
+                    
+                    log_debug(f"Successfully updated device: {unit.name}", DEBUG_DEVICE, self.debug_level)
+                    
+            except Exception as e:
+                error_msg = f"Error processing device {unit.name} (ID: {unit.id}): {str(e)}"
+                log_debug(error_msg, DEBUG_DEVICE, self.debug_level)
+                Domoticz.Error(error_msg)
+        
+        # Log summary of device creation/update process
+        log_debug(f"Device creation complete. Created: {devices_created}, Updated: {devices_updated}, Total: {total_devices}", 
+                DEBUG_BASIC, self.debug_level)
 
     def initialize_connection(self):
         """
@@ -981,11 +994,10 @@ class BasePlugin:
     def onStart(self):
         """Initialize plugin with corrected debug handling"""
         try:
-            # Set debug level
+            # Set debug level first
             self.debug_level = int(Parameters["Mode6"])
             
             if self.debug_level != DEBUG_NONE:
-                # Log which debug categories are enabled
                 debug_categories = []
                 if self.debug_level & DEBUG_BASIC:
                     debug_categories.append("Basic")
@@ -1004,16 +1016,17 @@ class BasePlugin:
                 log_debug("Enabled debug categories: " + ", ".join(debug_categories), DEBUG_BASIC, self.debug_level)
                 dump_config_to_log()
                 
-            # Initialize translation system
-            log_debug("Initializing translation system", DEBUG_BASIC, self.debug_level)
-            set_language(Parameters["Mode3"])
-            log_debug(f"Language set to: {Parameters['Mode3']}", DEBUG_BASIC, self.debug_level)
-
-            # Initialize basic parameters
+            # Initialize basic parameters first
             log_debug("Initializing plugin parameters", DEBUG_BASIC, self.debug_level)
             self.name = Parameters['Name']
             self.host = Parameters['Address']
             self.port = Parameters['Port']
+            
+            # Initialize translations
+            log_debug("Initializing translation system", DEBUG_BASIC, self.debug_level)
+            self.translation_manager.bulk_add_translations(TRANSLATIONS)
+            set_language(Parameters["Mode3"])
+            self.translation_manager.initialize_debug(self.debug_level)
             
             # Set heartbeat interval
             heartbeat_interval = int(Parameters['Mode2'])
@@ -1024,7 +1037,7 @@ class BasePlugin:
             log_debug("Creating devices", DEBUG_DEVICE, self.debug_level)
             self.create_devices()
 
-            # Initialize connection
+            # Initialize connection only after host/port are set
             log_debug("Initializing connection", DEBUG_BASIC, self.debug_level)
             if not self.initialize_connection():
                 log_debug("Failed to initialize connection - stopping initialization", DEBUG_BASIC, self.debug_level)
@@ -1111,6 +1124,65 @@ class BasePlugin:
         log_debug("Heartbeat received - updating all devices", DEBUG_BASIC, self.debug_level)
         self.update_all()
 
+
+def set_language(language_code: str) -> None:
+    """Set the current language based on plugin parameter"""
+    language_map = {
+        '0': Language.ENGLISH,
+        '1': Language.POLISH,
+        '2': Language.DUTCH
+    }
+    language = language_map.get(language_code)
+    if language is None:
+        log_debug(f"Invalid language code: {language_code}, defaulting to English", DEBUG_BASIC, _plugin.debug_level)
+        language = Language.ENGLISH
+    else:
+        log_debug(f"Setting language to: {language.name}", DEBUG_BASIC, _plugin.debug_level)
+    _plugin.translation_manager.set_language(language)
+
+def translate(key: str) -> str:
+    """Get translation for a key"""
+    return _plugin.translation_manager.get(key)
+
+def translate_selector_options(options: list) -> str:
+    """
+    Translate a list of selector switch options and join them with pipes
+    
+    Args:
+        options: List of English option names
+        
+    Returns:
+        Pipe-separated string of translated options
+    """
+    translated_options = []
+    for option in options:
+        translated = translate(option)
+        translated_options.append(translated)
+        if translated == option and option not in _plugin.translation_manager._translations:
+            log_debug(f"Selector option missing translation: {option}", DEBUG_BASIC, _plugin.debug_level)
+    return '|'.join(translated_options)
+
+def is_translatable_key(text: str) -> bool:
+    """
+    Check if a text is a translatable key or translation value
+    
+    Args:
+        text: Text to check
+        
+    Returns:
+        bool: True if text is a translatable key or one of its translations
+    """
+    # Check if text is a direct key in translations
+    if text in _plugin.translation_manager._translations:
+        return True
+        
+    # Check if text is a translation value in any language
+    for key, translations in _plugin.translation_manager._translations.items():
+        if any(text == trans for trans in translations.values()):
+            log_debug(f"Found translation value match: {text} (key: {key})", DEBUG_DATA, _plugin.debug_level)
+            return True
+            
+    return False
 
 global _plugin
 _plugin = BasePlugin()
