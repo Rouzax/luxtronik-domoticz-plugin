@@ -503,7 +503,7 @@ class BasePlugin:
             dict(TypeName='Temperature', Used=1), translate('Hot gas temp')],
 
             # Compressor suction temperature
-            ['READ_CALCUL', 13, (to_float, 10),
+            ['READ_CALCUL', 176, (to_float, 10),
             dict(TypeName='Temperature', Used=1), translate('Suction temp')],
 
             # Superheat monitoring
