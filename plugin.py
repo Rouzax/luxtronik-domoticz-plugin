@@ -1,7 +1,7 @@
 # Luxtronik plugin based on sockets
 # Author: ajarzyna, Rouzax, 2025
 """
-<plugin key="luxtronik" name="Luxtronik Heat Pump Controller" author="Rouzax" version="1.0.1">
+<plugin key="luxtronik" name="Luxtronik Heat Pump Controller" author="Rouzax" version="1.0.2">
     <description>
         <h2>Luxtronik Heat Pump Controller Plugin</h2><br/>
         <p>This plugin connects to Luxtronik-based heat pump controllers using socket communication.</p>
