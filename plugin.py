@@ -74,6 +74,28 @@ DEBUG_PROTO = 8                  # 0000 1000 - Protocol/message details
 DEBUG_DATA = 16                  # 0001 0000 - Data parsing and processing
 DEBUG_ALL = -1                   # 1111 1111 - All debugging enabled
 
+# Device range mappings for descriptions
+DEVICE_RANGE_MAPPINGS = {
+    'Superheat': 'superheat',
+    'High pressure': 'pressure_high',
+    'Low pressure': 'pressure_low',
+    'Hot gas temp': 'hot_gas',
+    'COP total': 'cop',
+    'Heating pump speed': 'pump_speed',
+    'Brine pump speed': 'pump_speed',
+    'Brine temp diff': 'brine_temp_diff',
+    'Heating temp diff': 'heating_temp_diff',
+}
+
+# Socket command codes for communication with Luxtronik controller
+# Each command represents a different type of request to the heat pump
+SOCKET_COMMANDS = {
+    'WRIT_PARAMS': 3002,  # Write parameters to the controller
+    'READ_PARAMS': 3003,  # Read parameter values
+    'READ_CALCUL': 3004,  # Read calculated values
+    'READ_VISIBI': 3005   # Read visibility settings
+}
+
 def log_debug(message, level, current_debug_level):
     """
     Log debug messages based on debug level using appropriate Domoticz log levels:
@@ -114,13 +136,138 @@ def log_debug(message, level, current_debug_level):
     except Exception as e:
         # Fallback logging if something goes wrong - use Error level for visibility
         Domoticz.Error(f"[INIT] {message} (Logging error: {str(e)})")
+        
 
-SOCKET_COMMANDS = {
-    'WRIT_PARAMS': 3002,
-    'READ_PARAMS': 3003,
-    'READ_CALCUL': 3004,
-    'READ_VISIBI': 3005
-}
+class DeviceUpdateTracker:
+    def __init__(self):
+        self.last_update_times = {}
+        self.graph_update_interval = 300  # 5 minutes in seconds
+        self.device_types = {}
+        
+        self.graphing_devices = {
+            'Temperature',
+            'Custom',
+            'kWh',
+            'Percentage'
+        }
+        
+        self.type_mapping = {
+            80: ('Temperature', True),
+            243: ('Custom', True),
+            242: ('Custom', True),
+            244: ('Switch', False)
+        }
+
+    def _check_device_type(self, device) -> bool:
+        """Get cached device type information or check and cache if not present.
+        
+        For Text devices (which typically have Type 243 and SubType 19), mark as non-graphing.
+        """
+        try:
+            device_id = device.ID
+            
+            # If the device is a Text device, mark it as non-graphing and return immediately.
+            if hasattr(device, 'SubType') and device.Type == 243 and device.SubType == 19:
+                self.device_types[device_id] = False
+                return False
+            
+            if device_id not in self.device_types:
+                # Look up the device type in our mapping.
+                device_info = self.type_mapping.get(device.Type, ('Unknown', False))
+                type_name, is_graphing = device_info
+                
+                if _plugin.debug_level & DEBUG_DEVICE:
+                    type_info = f"Device {device_id} ({device.Name}) - Type: {device.Type} ({type_name})"
+                    if is_graphing:
+                        type_info += " [Graphing device]"
+                    log_debug(type_info, DEBUG_DEVICE, _plugin.debug_level)
+                
+                self.device_types[device_id] = is_graphing
+                
+            return self.device_types[device_id]
+            
+        except Exception as e:
+            log_debug(f"Error checking device type {device.Name}: {str(e)}", DEBUG_DEVICE, _plugin.debug_level)
+            return False
+
+
+    def _normalize_value(self, value_str: str) -> str:
+        """
+        Normalize a value for comparison.
+        - If the value is numeric (or contains a numeric portion), return its float value formatted to one decimal.
+        - Otherwise, return the trimmed (and lowercased) text for consistent text comparisons.
+        """
+        if not value_str:
+            return ""
+        
+        # Trim whitespace and use only the first part if a ';' is present.
+        value_str = value_str.strip()
+        if ';' in value_str:
+            value_str = value_str.split(';')[0].strip()
+        
+        try:
+            return f"{float(value_str):.1f}"
+        except ValueError:
+            return value_str.lower()
+
+    def needs_update(self, device, new_values) -> tuple[bool, str, str]:
+        """
+        Determine if a device needs an update based on its type and new values.
+        Returns a tuple of:
+        (needs_update, update_reason, diff_message)
+        where diff_message details any numeric or text differences.
+        """
+        try:
+            current_time = time.time()
+            device_id = device.ID
+            is_graphing = self._check_device_type(device)
+            
+            # Get current values from the device.
+            current_values = {
+                'nValue': device.nValue,
+                'sValue': str(device.sValue)
+            }
+            
+            values_changed = False
+            diff_message = ""
+            
+            # Compare numeric value (nValue) directly.
+            if 'nValue' in new_values and new_values['nValue'] != current_values['nValue']:
+                values_changed = True
+                diff_message += f"nValue: {current_values['nValue']} -> {new_values['nValue']}; "
+            
+            # Compare sValue using normalized comparison.
+            if 'sValue' in new_values:
+                norm_current = self._normalize_value(current_values['sValue'])
+                norm_new = self._normalize_value(new_values['sValue'])
+                if norm_current != norm_new:
+                    values_changed = True
+                    diff_message += (f"sValue: {current_values['sValue']} (normalized: {norm_current}) -> "
+                                    f"{new_values['sValue']} (normalized: {norm_new})")
+                    # (Removed extra logging here to avoid duplicate output)
+            
+            if values_changed:
+                if is_graphing:
+                    self.last_update_times[device_id] = current_time
+                return True, "Values changed", diff_message
+                        
+            # For graphing devices, force an update after the interval even if values are equal.
+            if is_graphing:
+                last_update = self.last_update_times.get(device_id, 0)
+                time_since_update = current_time - last_update
+                if time_since_update >= self.graph_update_interval:
+                    self.last_update_times[device_id] = current_time
+                    return True, "Interval update", ""
+                else:
+                    time_until_update = self.graph_update_interval - time_since_update
+                    return False, f"No changes, next update in {int(time_until_update)}s", ""
+            else:
+                return False, "Non-graphing device, no changes", ""
+                        
+        except Exception as e:
+            log_debug(f"Failed to check update for {device.Name}: {str(e)}", DEBUG_DEVICE, _plugin.debug_level)
+            return False, f"Error: {str(e)}", ""
+
 
 # Read callbacks
 def to_float(data_list: list, data_idx: int, divider: float) -> dict:
@@ -141,25 +288,54 @@ def selector_switch_level_mapping(data_list: list, data_idx: int, mapping: list)
     return {'nValue': int(level), 'sValue': str(level)}
     
     
-def to_instant_power(data_list: list, power_data_idx: int, *args) -> dict:
-    """Converts instant power to string."""
-    instant_power = float(data_list[power_data_idx])
-    return {'sValue': f"{instant_power};0"}
-
-def to_instant_power_split(data_list: list, power_data_idx: int, additional_data: list) -> dict:
-    """Splits instant power into heating or hot water based on operating mode."""
-    state_idx, valid_states = additional_data
-    instant_power = float(data_list[power_data_idx])
+def to_instant_power(data_list: list, power_data_idx: int, *_args) -> dict:
+    """Converts instant power to string for Computed energy meter.
     
-    # Check operating mode
-    current_state = int(data_list[state_idx])
-    
-    # If not in a valid state, return 0 power
-    if current_state not in valid_states:
-        return {'sValue': f"0;0"}
+    Args:
+        data_list: List of heat pump data values
+        power_data_idx: Index of power value in data_list
+    Returns:
+        dict: Device update parameters with instant power value
+    """
+    try:
+        # Handle case where power_data_idx is a list
+        if isinstance(power_data_idx, list):
+            power_data_idx = power_data_idx[0]
+            
+        instant_power = float(data_list[power_data_idx])
+        return {'sValue': f"{instant_power:.1f}"}
         
-    return {'sValue': f"{instant_power};0"}
+    except Exception as e:
+        log_debug(f"Error in to_instant_power: {str(e)}", DEBUG_DATA, _plugin.debug_level)
+        return {'sValue': "0.0"}
 
+def to_instant_power_split(data_list: list, power_data_idx: int, additional_data: list, *_args) -> dict:
+    """Splits instant power into heating or hot water based on operating mode.
+    
+    Args:
+        data_list: List of heat pump data values
+        power_data_idx: Index of power value in data_list
+        additional_data: List containing [state_idx, valid_states]
+    Returns:
+        dict: Device update parameters with power value based on operating mode
+    """
+    try:
+        state_idx, valid_states = additional_data
+        
+        # Handle case where power_data_idx is a list 
+        if isinstance(power_data_idx, list):
+            power_data_idx = power_data_idx[0]
+            
+        instant_power = float(data_list[power_data_idx])
+        current_state = int(data_list[state_idx])
+        
+        # Return power value based on state
+        power = instant_power if current_state in valid_states else 0.0
+        return {'sValue': f"{power:.1f}"}
+        
+    except Exception as e:
+        log_debug(f"Error in to_instant_power_split: {str(e)}", DEBUG_DATA, _plugin.debug_level)
+        return {'sValue': "0.0"}
 
 def to_cop_calculator(data_list: list, indices: int, *args) -> dict:
     """Calculates COP based on heat output and power input."""
@@ -212,6 +388,31 @@ def to_text_state(data_list: list, data_idx: int, config: list) -> dict:
     state_text = mode_names.get(current_mode, translate('No requirement'))
     return {'nValue': 0, 'sValue': state_text}
 
+def calculate_temp_diff(data_list: list, indices: list, divider: float) -> dict:
+    """Calculate temperature difference between two sensors
+    Args:
+        data_list: List of all sensor data
+        indices: List containing [temp1_idx, temp2_idx]
+        divider: Value to divide readings by (typically 10)
+    Returns:
+        dict with calculated difference
+    """
+    # Get temperatures and divide by the divider
+    temp1 = float(data_list[indices[0]]) / divider
+    temp2 = float(data_list[indices[1]]) / divider
+    
+    # Calculate absolute difference
+    diff = abs(temp1 - temp2)
+    
+    # Return formatted result
+    return {'sValue': str(round(diff, 1))}
+
+def get_range_description(range_key: str) -> str:
+    """Get the translated range description for a device"""
+    if not hasattr(_plugin, 'translation_manager'):
+        return ""
+    return _plugin.translation_manager.get_range(range_key)
+
 
 # Write callbacks
 def command_to_number(*_args, Command: str, **_kwargs):
@@ -252,14 +453,22 @@ class TranslationManager:
         self._default_language = default_language
         self._current_language = default_language
         self._translations: Dict[str, Dict[Language, str]] = {}
-        self._missing_translations: set = set()
+        self._ranges: Dict[str, Dict[Language, Dict[str, str]]] = {}
         
     def set_language(self, language: Language) -> None:
         """Set the current language"""
+        if not isinstance(language, Language):
+            raise ValueError(f"Invalid language type: {type(language)}. Expected Language enum.")
         self._current_language = language
         
     def add_translation(self, key: str, translations: Dict[Language, str]) -> None:
         """Add a translation entry"""
+        if not isinstance(key, str):
+            raise ValueError(f"Translation key must be string, got {type(key)}")
+            
+        if not isinstance(translations, dict):
+            raise ValueError(f"Translations must be dict, got {type(translations)}")
+            
         if Language.ENGLISH not in translations:
             translations[Language.ENGLISH] = key
             
@@ -267,27 +476,72 @@ class TranslationManager:
         
     def get(self, key: str) -> str:
         """Get translation for the current language"""
+        if not isinstance(key, str):
+            return str(key)
+            
         if key not in self._translations:
             return key
             
         translations = self._translations[key]
         if self._current_language not in translations:
-            return translations[self._default_language]
+            return translations.get(self._default_language, key)
             
         return translations[self._current_language]
+
+    def add_range(self, key: str, ranges: Dict[Language, Dict[str, str]]) -> None:
+        """Add a range entry with validation"""
+        if not isinstance(key, str):
+            raise ValueError(f"Range key must be string, got {type(key)}")
+            
+        if not isinstance(ranges, dict):
+            raise ValueError(f"Ranges must be dict, got {type(ranges)}")
+            
+        if Language.ENGLISH not in ranges:
+            ranges[Language.ENGLISH] = {'description': key}
+            
+        self._ranges[key] = ranges
+
+    def get_range(self, range_key: str) -> str:
+        """Get range description for current language with validation"""
+        if not isinstance(range_key, str):
+            return ""
+            
+        if range_key not in self._ranges:
+            return ""
+            
+        ranges = self._ranges[range_key]
+        current_range = ranges.get(self._current_language, ranges.get(self._default_language, {}))
+        return current_range.get('description', "")
         
     def bulk_add_translations(self, translations_data: Dict[str, Dict[Language, str]]) -> None:
         """Add multiple translations at once"""
+        if not isinstance(translations_data, dict):
+            raise ValueError(f"Translations data must be dict, got {type(translations_data)}")
+            
         for key, translations in translations_data.items():
-            self.add_translation(key, translations)
+            if key != 'ranges':  # Skip ranges key
+                self.add_translation(key, translations)
+            
+    def bulk_add_ranges(self, ranges_data: Dict[str, Dict[Language, Dict[str, str]]]) -> None:
+        """Add multiple ranges at once"""
+        if not isinstance(ranges_data, dict):
+            raise ValueError(f"Ranges data must be dict, got {type(ranges_data)}")
+            
+        for key, ranges in ranges_data.items():
+            self.add_range(key, ranges)
             
     def initialize_debug(self, debug_level: int) -> None:
         """Initialize debug logging after plugin is started"""
-        for key, translations in self._translations.items():
-            # Check for missing translations for all languages
-            for lang in Language:
+        # Check translations for all languages
+        for lang in Language:
+            missing_translations = []
+            for key, translations in self._translations.items():
                 if lang not in translations:
-                    log_debug(f"Missing {lang.name} translation for key: {key}", DEBUG_BASIC, debug_level)
+                    missing_translations.append(key)
+                    
+            if missing_translations:
+                log_debug(f"Missing {lang.name} translations for keys: {', '.join(missing_translations)}", 
+                         DEBUG_BASIC, debug_level)
                     
         # Log translation coverage
         self._check_translation_coverage(debug_level)
@@ -296,15 +550,21 @@ class TranslationManager:
         """Check and log translation coverage for current language"""
         missing_count = 0
         total_keys = len(self._translations)
+        missing_keys = []
         
         for key, translations in self._translations.items():
             if self._current_language not in translations:
                 missing_count += 1
-                log_debug(f"Missing translation for '{key}' in {self._current_language.name}", DEBUG_BASIC, debug_level)
+                missing_keys.append(key)
         
         if missing_count > 0:
-            log_debug(f"Translation coverage for {self._current_language.name}: {total_keys - missing_count}/{total_keys} ({((total_keys - missing_count)/total_keys)*100:.1f}%)", 
+            coverage_pct = ((total_keys - missing_count)/total_keys) * 100
+            log_debug(f"Translation coverage for {self._current_language.name}: "
+                     f"{total_keys - missing_count}/{total_keys} ({coverage_pct:.1f}%)", 
                      DEBUG_BASIC, debug_level)
+            log_debug(f"Missing translations for: {', '.join(missing_keys)}", 
+                     DEBUG_BASIC, debug_level)
+            
 class BasePlugin:
     def __init__(self):
         self.debug_level = DEBUG_NONE
@@ -516,7 +776,15 @@ class BasePlugin:
 
             # Low pressure monitoring
             ['READ_CALCUL', 181, (to_float, 100),
-            dict(TypeName='Custom', Used=1, Options={'Custom': '1;bar'}), translate('Low pressure')],            
+            dict(TypeName='Custom', Used=1, Options={'Custom': '1;bar'}), translate('Low pressure')],
+            
+            # Brine temperature difference (Source in - Source out)
+            ['READ_CALCUL', [19, 20], (calculate_temp_diff, 10),
+            dict(TypeName='Custom', Used=1, Options={'Custom': '1;K'}), translate('Brine temp diff')],
+            
+            # Heating temperature difference (Supply - Return)
+            ['READ_CALCUL', [10, 11], (calculate_temp_diff, 10),
+            dict(TypeName='Custom', Used=1, Options={'Custom': '1;K'}), translate('Heating temp diff')],         
         ]
         
         class Unit:
@@ -548,9 +816,20 @@ class BasePlugin:
             self.dev_lists[tmp_unit.message][tmp_unit.id] = tmp_unit
             if tmp_unit.write_conversion_callback is not None:
                 self.dev_lists['WRIT_PARAMS'][tmp_unit.id] = tmp_unit
+                
+    def _get_device_description(self, device_name: str) -> str:
+        """Get range description for a device if available"""
+        try:
+            # Look up the range key for this device
+            range_key = DEVICE_RANGE_MAPPINGS.get(device_name)
+            if range_key:
+                return self.translation_manager.get_range(range_key)
+        except Exception as e:
+            log_debug(f"Error getting description for {device_name}: {str(e)}", DEBUG_DEVICE, self.debug_level)
+        return None    
 
     def create_devices(self):
-        """Create or update devices with consolidated logging"""
+        """Create or update devices with proper description handling and debug logging"""
         log_debug("Starting device creation process", DEBUG_BASIC, self.debug_level)
         
         # Prepare the device list
@@ -566,40 +845,25 @@ class BasePlugin:
         
         for unit in self.units.values():
             try:
-                # Prepare parameter summary for logging
-                param_summary = []
-                if 'TypeName' in unit.dev_params:
-                    param_summary.append(f"Type: {unit.dev_params['TypeName']}")
-                if 'Options' in unit.dev_params:
-                    param_summary.append(f"Options: {unit.dev_params['Options']}")
-                if 'Switchtype' in unit.dev_params:
-                    param_summary.append(f"Switchtype: {unit.dev_params['Switchtype']}")
-                if 'Image' in unit.dev_params:
-                    param_summary.append(f"Image: {unit.dev_params['Image']}")
+                # Get description if available for this device
+                description = self._get_device_description(unit.name)
+                if description:
+                    unit.dev_params['Description'] = description
                 
                 if unit.id not in Devices:
-                    # Creating new device
-                    if self.debug_level == DEBUG_ALL:
-                        log_debug(f"Device {unit.id} ({unit.name}) - Creating new device [{', '.join(param_summary)}]", 
-                                DEBUG_DEVICE, self.debug_level)
-                    else:
-                        log_debug(f"Device {unit.id} ({unit.name}) - Creating new device", 
-                                DEBUG_DEVICE, self.debug_level)
-                    
+                    # Log device creation with parameters if debug is enabled
+                    if self.debug_level & DEBUG_DEVICE:
+                        param_info = {k: v for k, v in unit.dev_params.items() 
+                                    if k in ['TypeName', 'Options', 'Switchtype', 'Image']}
+                        log_debug(f"Creating device {unit.id} ({unit.name}) with parameters: {param_info}", DEBUG_DEVICE, self.debug_level)
                     Domoticz.Device(**unit.dev_params).Create()
                     devices_created += 1
                 else:
                     # Updating existing device
                     update_params = unit.dev_params.copy()
-                    update_params.pop('Used', None)  # Do not change "Used" option which can be set by user
-                    
-                    if self.debug_level == DEBUG_ALL:
-                        log_debug(f"Device {unit.id} ({unit.name}) - Updating existing device [{', '.join(param_summary)}]", 
-                                DEBUG_DEVICE, self.debug_level)
-                    else:
-                        log_debug(f"Device {unit.id} ({unit.name}) - Updating existing device", 
-                                DEBUG_DEVICE, self.debug_level)
-                    
+                    update_params.pop('Used', None)  # Don't change Used flag which can be set by user
+                    if self.debug_level & DEBUG_DEVICE:
+                        log_debug(f"Updating device {unit.id} ({unit.name})", DEBUG_DEVICE, self.debug_level)
                     update_device(**update_params)
                     devices_updated += 1
                     
@@ -609,8 +873,7 @@ class BasePlugin:
                 Domoticz.Error(error_msg)
         
         # Log summary of device creation/update process
-        log_debug(f"Device creation complete - Created: {devices_created}, Updated: {devices_updated}, Total: {total_devices}", 
-                DEBUG_BASIC, self.debug_level)
+        log_debug(f"Device creation complete - Created: {devices_created}, Updated: {devices_updated}, Total: {total_devices}", DEBUG_BASIC, self.debug_level)
 
     def initialize_connection(self):
         """Initialize socket connection with  logging"""
@@ -714,7 +977,7 @@ class BasePlugin:
             return command, 0, 0, []
 
     def update(self, message):
-        """Update devices for a specific message type with debug logging"""
+        """Update devices for a specific message type with accurate update counting"""
         log_debug(f"Starting update for message type: {message}", DEBUG_BASIC, self.debug_level)
         
         try:
@@ -724,30 +987,40 @@ class BasePlugin:
             
             if data_length > 0:
                 log_debug(f"Received {data_length} values to process", DEBUG_DATA, self.debug_level)
-                devices_updated = 0
+                updates_count = 0
                 
                 # Update each device
                 for device in self.dev_lists[message].values():
                     try:
-                        log_debug(f"Updating device: {device.name}", DEBUG_DEVICE, self.debug_level)
+                        # Create a copy of the device's current values
+                        old_nValue = Devices[device.id].nValue
+                        old_sValue = Devices[device.id].sValue
+                        
+                        # Update the device
                         device.update_domoticz_dev(data_list)
-                        devices_updated += 1
+                        
+                        # Check if values actually changed
+                        if (Devices[device.id].nValue != old_nValue or 
+                            Devices[device.id].sValue != old_sValue):
+                            updates_count += 1
+                            
                     except Exception as e:
                         error_msg = f"Error updating device {device.name}: {str(e)}"
                         log_debug(error_msg, DEBUG_DEVICE, self.debug_level)
                         Domoticz.Error(error_msg)
                         
-                log_debug(f"Update complete - {devices_updated} devices updated", DEBUG_DEVICE, self.debug_level)
+                log_debug(f"{message}: Actually updated {updates_count} devices", DEBUG_DEVICE, self.debug_level)
+                
             else:
                 log_debug(f"No data received for message type: {message}", DEBUG_DATA, self.debug_level)
-                
+                    
         except Exception as e:
             error_msg = f"Error in update method: {str(e)}"
             log_debug(error_msg, DEBUG_BASIC, self.debug_level)
             Domoticz.Error(error_msg)
 
     def update_all(self):
-        """Update all devices with minimal logging"""
+        """Update all devices with accurate update counting"""
         if self.debug_level == DEBUG_ALL:
             log_debug("Heartbeat update started", DEBUG_BASIC, self.debug_level)
         
@@ -755,11 +1028,28 @@ class BasePlugin:
             for command_type in ['READ_CALCUL', 'READ_PARAMS']:
                 result = self.process_socket_message(command_type)
                 if result and result[2] > 0:  # If we got data
-                    devices_updated = sum(1 for device in self.dev_lists[command_type].values() 
-                                    if self._update_device(device, result[3]))
+                    updates_count = 0
+                    for device in self.dev_lists[command_type].values():
+                        try:
+                            # Store current values
+                            old_nValue = Devices[device.id].nValue
+                            old_sValue = Devices[device.id].sValue
+                            
+                            # Update device
+                            if self._update_device(device, result[3]):
+                                # Check if values actually changed
+                                if (Devices[device.id].nValue != old_nValue or 
+                                    Devices[device.id].sValue != old_sValue):
+                                    updates_count += 1
+                                    
+                        except Exception as e:
+                            log_debug(f"Failed to update {device.name}: {str(e)}", 
+                                    DEBUG_DEVICE, self.debug_level)
                     
                     if self.debug_level == DEBUG_ALL:
-                        log_debug(f"{command_type}: Updated {devices_updated} devices", DEBUG_BASIC, self.debug_level)
+                        log_debug(f"{command_type}: Actually updated {updates_count} devices", 
+                                DEBUG_BASIC, self.debug_level)
+                                
         except Exception as e:
             error_msg = f"Update failed: {str(e)}"
             log_debug(error_msg, DEBUG_BASIC, self.debug_level)
@@ -775,7 +1065,7 @@ class BasePlugin:
             return False
 
     def onStart(self):
-        """Initialize plugin with corrected debug handling"""
+        """Initialize plugin with debug handling"""
         try:
             # Set debug level first
             self.debug_level = int(Parameters["Mode6"])
@@ -808,9 +1098,12 @@ class BasePlugin:
             self.host = Parameters['Address']
             self.port = Parameters['Port']
             
-            # Initialize translations
+            # Initialize translations and ranges
             log_debug("Initializing translation system", DEBUG_BASIC, self.debug_level)
-            self.translation_manager.bulk_add_translations(TRANSLATIONS)
+            translations_data = {k: v for k, v in TRANSLATIONS.items() if k != 'ranges'}
+            self.translation_manager.bulk_add_translations(translations_data)
+            if 'ranges' in TRANSLATIONS:
+                self.translation_manager.bulk_add_ranges(TRANSLATIONS['ranges'])
             set_language(Parameters["Mode3"])
             self.translation_manager.initialize_debug(self.debug_level)
             
@@ -931,23 +1224,36 @@ def translate(key: str) -> str:
     """Get translation for a key"""
     return _plugin.translation_manager.get(key)
 
+
 def translate_selector_options(options: list) -> str:
     """
-    Translate a list of selector switch options and join them with pipes
-    
+    Translate a list of selector switch options and join them with pipes.
+
+    For each option in the list, this function retrieves its translation using the
+    plugin's translation manager. If the current language is not present in the
+    translation dictionary for that option, it logs a message indicating that a
+    translation is missing. Finally, it returns the translated options as a single
+    string joined by the '|' character.
+
     Args:
-        options: List of English option names
-        
+        options (list): A list of option names (typically in English).
+
     Returns:
-        Pipe-separated string of translated options
+        str: A pipe-separated string of translated options.
     """
     translated_options = []
     for option in options:
+        # Get translation or use original if not found.
         translated = translate(option)
         translated_options.append(translated)
-        if translated == option and option not in _plugin.translation_manager._translations:
+        
+        # Only log if the current language is not present in the translations for this option.
+        translations = _plugin.translation_manager._translations.get(option, {})
+        if _plugin.translation_manager._current_language not in translations:
             log_debug(f"Selector option missing translation: {option}", DEBUG_BASIC, _plugin.debug_level)
+            
     return '|'.join(translated_options)
+
 
 def is_translatable_key(text: str) -> bool:
     """
@@ -964,11 +1270,11 @@ def is_translatable_key(text: str) -> bool:
         return True
         
     # Check if text is a translation value in any language
-    for key, translations in _plugin.translation_manager._translations.items():
-        if any(text == trans for trans in translations.values()):
-            log_debug(f"Found translation value match: {text} (key: {key})", DEBUG_DATA, _plugin.debug_level)
-            return True
-            
+    for translations in _plugin.translation_manager._translations.values():
+        for lang_value in translations.values():
+            if isinstance(lang_value, str) and text == lang_value:
+                return True
+                
     return False
 
 global _plugin
@@ -1015,37 +1321,41 @@ def onHeartbeat():
     _plugin.onHeartbeat()
 
 
-def update_device(Unit: int = None, nValue: int = None, sValue: str = None, Image: int = None, SignalLevel: int = None,
-                  BatteryLevel: int = None, Options: dict = None, TimedOut: int = None, Name: str = None,
-                  TypeName: str = None, Type: int = None, Subtype: int = None, Switchtype: int = None,
+def update_device(Unit: int = None, nValue: int = None, sValue: str = None, Image: int = None, 
+                  SignalLevel: int = None, BatteryLevel: int = None, Options: dict = None, 
+                  TimedOut: int = None, Name: str = None, TypeName: str = None, 
+                  Type: int = None, Subtype: int = None, Switchtype: int = None,
                   Used: int = None, Description: str = None, Color: str = None):
-    """Update Domoticz device with logging"""
-    # Validate device exists
+    """
+    Update a Domoticz device with update timing optimization.
+    Delegates numeric (or text) change comparison to DeviceUpdateTracker and logs a combined update message.
+    """
+    
+    # Ensure the device exists.
     if Unit not in Devices:
-        log_debug(f"Device {Unit} not found - attempting to recreate devices", DEBUG_DEVICE, _plugin.debug_level)
+        log_debug(f"Device {Unit} not found - attempting to recreate devices", 
+                  DEBUG_DEVICE, _plugin.debug_level)
         _plugin.create_devices()
         if Unit not in Devices:
             Domoticz.Error(f"Failed to create device {Unit}")
             return
 
     device = Devices[Unit]
-    # update_needed = False
-    largs = {"nValue": device.nValue if device.nValue is not None else 0, 
-             "sValue": str(device.sValue) if device.sValue is not None else ""}
     
-    # Build changes summary
-    changes = []
+    # Build update arguments from the current state.
+    largs = {
+        "nValue": device.nValue if device.nValue is not None else 0, 
+        "sValue": str(device.sValue) if device.sValue is not None else ""
+    }
     
-    # Handle main values
+    # Overwrite with new numeric values if provided.
     if nValue is not None:
         largs["nValue"] = nValue
-        changes.append(f"nValue: {device.nValue} → {nValue}")
-    
     if sValue is not None:
         largs["sValue"] = str(sValue)
-        changes.append(f"sValue: {device.sValue} → {sValue}")
-
-    # Handle other parameters
+    
+    # Process additional metadata parameters and track any differences.
+    metadata_changes = []
     param_updates = {
         'Image': (Image, device.Image),
         'SignalLevel': (SignalLevel, device.SignalLevel),
@@ -1059,30 +1369,46 @@ def update_device(Unit: int = None, nValue: int = None, sValue: str = None, Imag
         'Color': (Color, device.Color)
     }
 
-    # Process other parameters
     for param_name, (new_value, current_value) in param_updates.items():
-        if new_value is not None:
+        if new_value is not None and new_value != current_value:
             largs[param_name] = new_value
-            changes.append(f"{param_name}: {current_value} → {new_value}")
+            metadata_changes.append(f"{param_name}: {current_value} -> {new_value}")
 
-    # Process name separately to handle translation
+    # Handle name updates (with translation) if applicable.
     if Name is not None and Name != device.Name:
-        current_name = device.Name.replace(f"{Parameters['Name']} - ", "") if f"{Parameters['Name']} - " in device.Name else device.Name
+        current_name = (device.Name.replace(f"{Parameters['Name']} - ", "") 
+                        if f"{Parameters['Name']} - " in device.Name 
+                        else device.Name)
         if is_translatable_key(current_name):
             new_name = f"{Parameters['Name']} - {Name}"
             largs["Name"] = new_name
-            changes.append(f"Name: {current_name} → {Name}")
+            metadata_changes.append(f"Name: {current_name} -> {Name}")
 
-    # Perform update if needed
-    try:
-        # Single line log per device update
-        if _plugin.debug_level & DEBUG_DEVICE:
-            changes_str = ', '.join(changes) if changes else 'no changes'
-            log_debug(f"Device {Unit} ({device.Name}) - {changes_str}", DEBUG_DEVICE, _plugin.debug_level)
+    # Use the DeviceUpdateTracker to decide whether the device values have changed.
+    if not hasattr(_plugin, 'update_tracker'):
+        _plugin.update_tracker = DeviceUpdateTracker()
         
-        Devices[Unit].Update(**largs)
-    except Exception as e:
-        Domoticz.Error(f"Error updating device {Unit}: {str(e)}")
+    needs_update, update_reason, diff_message = _plugin.update_tracker.needs_update(
+        device,
+        {'nValue': largs['nValue'], 'sValue': largs['sValue']}
+    )
+    
+    # Build and log a combined message that includes update decision, diff info, and metadata changes.
+    if _plugin.debug_level & DEBUG_DEVICE:
+        combined_message = f"Update decision for Device {Unit} ({device.Name}): {update_reason}"
+        if diff_message:
+            combined_message += f" -- {diff_message}"
+        if metadata_changes:
+            combined_message += f" | Metadata changes: {', '.join(metadata_changes)}"
+        log_debug(combined_message, DEBUG_DEVICE, _plugin.debug_level)
+    
+    # Update the device only if needed.
+    if needs_update or metadata_changes:
+        try:
+            Devices[Unit].Update(**largs)
+        except Exception as e:
+            Domoticz.Error(f"Error updating device {Unit} ({device.Name}): {str(e)}")
+            
 
 def dump_config_to_log():
     """Dump plugin configuration and device states to log with detailed formatting"""
