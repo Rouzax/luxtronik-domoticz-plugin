@@ -658,10 +658,10 @@ class BasePlugin:
 
             # Cooling mode enable/disable switch
             ['READ_PARAMS', 108, [to_number],
-            dict(TypeName='Switch', Image=16, Used=0), translate('Cooling'), [command_to_number]],
+            dict(TypeName='Switch', Image=16, Used=1), translate('Cooling'), [command_to_number]],
 
             ['READ_PARAMS', 1, (to_float, 10),
-                dict(Type=242, Subtype=1, Used=1, 
+                dict(Type=242, Subtype=1, Used=0, 
                      Options={
                         "ValueStep": "0.5",   # Step increment of 0.5°C
                         "ValueMin": "-5",     # Minimum value of -5°C
@@ -685,7 +685,7 @@ class BasePlugin:
 
             # Room temperature sensor reading
             ['READ_CALCUL', 227, (to_float, 10),
-            dict(TypeName='Temperature', Used=0), translate('Room temp')],
+            dict(TypeName='Temperature', Used=1), translate('Room temp')],
 
             # Room temperature setpoint
             ['READ_CALCUL', 228, (to_float, 10),
