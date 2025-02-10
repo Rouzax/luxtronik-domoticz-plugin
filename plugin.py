@@ -143,14 +143,7 @@ class DeviceUpdateTracker:
         self.last_update_times = {}
         self.graph_update_interval = 300  # 5 minutes in seconds
         self.device_types = {}
-        
-        self.graphing_devices = {
-            'Temperature',
-            'Custom',
-            'kWh',
-            'Percentage'
-        }
-        
+
         self.type_mapping = {
             80: ('Temperature', True),
             243: ('Custom', True),
@@ -407,13 +400,6 @@ def calculate_temp_diff(data_list: list, indices: list, divider: float) -> dict:
     # Return formatted result
     return {'sValue': str(round(diff, 1))}
 
-def get_range_description(range_key: str) -> str:
-    """Get the translated range description for a device"""
-    if not hasattr(_plugin, 'translation_manager'):
-        return ""
-    return _plugin.translation_manager.get_range(range_key)
-
-
 # Write callbacks
 def command_to_number(*_args, Command: str, **_kwargs):
     """Converts command to number."""
@@ -593,15 +579,6 @@ class BasePlugin:
             105: Field(translate('DHW temp target'), [a for a in range(300, 651, 5)]),
             108: Field(translate('Cooling'), [0, 1])
         }
-
-        work_modes_mapping = [(3, translate('Heating mode')),
-                              (4, translate('Hot water mode')),
-                              (2, translate('Swimming pool mode / Photovaltaik')),
-                              (2, translate('EVUM')),
-                              (1, translate('Defrost')),
-                              (0, translate('No requirement')),
-                              (4, translate('Heating external source mode')),
-                              (1, translate('Cooling'))]
 
         hot_water_temps = '|'.join([str(a / 10) for a in self.available_writes[105].get_val()])
         
@@ -1203,6 +1180,39 @@ class BasePlugin:
         if self.debug_level == DEBUG_ALL:
             log_debug("Heartbeat - Starting full device update", DEBUG_BASIC, self.debug_level)
         self.update_all()
+        
+    def onNotification(self, Name, Subject, Text, Status, Priority, Sound, ImageFile):
+        """
+        Handle notifications received by Domoticz.
+
+        This method logs all notification details and can trigger actions based on the notification's content.
+        For example, if the Subject of the notification is 'Force Update', the plugin triggers a full device update.
+        
+        Parameters:
+            Name (str): The name of the notification source.
+            Subject (str): The subject of the notification.
+            Text (str): The text/body of the notification.
+            Status (str): The status associated with the notification.
+            Priority (str): The priority level of the notification.
+            Sound (str): Sound setting for the notification.
+            ImageFile (str): The image file associated with the notification.
+        """
+        try:
+            # Log the complete notification details for debugging
+            log_debug(
+                f"Notification received - Name: {Name}, Subject: {Subject}, Text: {Text}, "
+                f"Status: {Status}, Priority: {Priority}, Sound: {Sound}, ImageFile: {ImageFile}",
+                DEBUG_BASIC, self.debug_level)
+
+            # Example: Trigger a full update if the subject is "Force Update"
+            if Subject.lower() == "force update":
+                log_debug("Force Update notification received; triggering full device update.", DEBUG_BASIC, self.debug_level)
+                self.update_all()
+            
+        except Exception as e:
+            error_msg = f"Error handling notification: {str(e)}"
+            log_debug(error_msg, DEBUG_BASIC, self.debug_level)
+            Domoticz.Error(error_msg)
 
 
 def set_language(language_code: str) -> None:
