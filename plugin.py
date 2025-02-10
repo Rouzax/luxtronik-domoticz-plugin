@@ -664,9 +664,16 @@ class BasePlugin:
             ['READ_PARAMS', 108, [to_number],
             dict(TypeName='Switch', Image=16, Used=0), translate('Cooling'), [command_to_number]],
 
-            # Temperature offset adjustment
             ['READ_PARAMS', 1, (to_float, 10),
-            dict(Type=242, Subtype=1, Used=0), translate('Temp +-'), (level_with_divider, 1/10)],
+                dict(Type=242, Subtype=1, Used=1, 
+                     Options={
+                        "ValueStep": "0.5",   # Step increment of 0.5°C
+                        "ValueMin": "-5",     # Minimum value of -5°C
+                        "ValueMax": "5",      # Maximum value of 5°C
+                        "ValueUnit": "°C"     # Unit to display
+                    }
+                ),
+                translate('Temp +-'), (level_with_divider, 1/10)],
 
             # Current operating mode status text
             ['READ_CALCUL', 80, (to_text_state, [268, 0.1]),
