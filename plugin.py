@@ -37,6 +37,8 @@
                 <option label="English" value="0" default="true"/>
                 <option label="Polish" value="1"/>
                 <option label="Dutch" value="2"/>
+                <option label="German" value="3"/>
+                <option label="French" value="4"/>
             </options>
         </param>
         <param field="Mode6" label="Debug Level" width="150px">
@@ -1299,17 +1301,18 @@ def set_language(language_code: str) -> None:
     language_map = {
         '0': Language.ENGLISH,
         '1': Language.POLISH,
-        '2': Language.DUTCH
+        '2': Language.DUTCH,
+        '3': Language.GERMAN,
+        '4': Language.FRENCH
     }
     language = language_map.get(language_code)
     if language is None:
-        log_debug(
-            f"Invalid language code: {language_code}, defaulting to English", DEBUG_BASIC, _plugin.debug_level)
+        log_debug(f"Invalid language code: {language_code}, defaulting to English", DEBUG_BASIC, _plugin.debug_level)
         language = Language.ENGLISH
     else:
-        log_debug(
-            f"Setting language to: {language.name}", DEBUG_BASIC, _plugin.debug_level)
+        log_debug(f"Setting language to: {language.name}", DEBUG_BASIC, _plugin.debug_level)
     _plugin.translation_manager.set_language(language)
+
 
 
 def translate(key: str) -> str:
