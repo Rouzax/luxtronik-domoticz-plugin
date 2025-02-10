@@ -579,10 +579,6 @@ class BasePlugin:
             105: Field(translate('DHW temp target'), [a for a in range(300, 651, 5)]),
             108: Field(translate('Cooling'), [0, 1])
         }
-
-        hot_water_temps = '|'.join([str(a / 10) for a in self.available_writes[105].get_val()])
-        
-        heating_temps = '|'.join([str(a / 10) for a in self.available_writes[1].get_val()])
         
         # Define selector options as separate lists
         heating_mode_options = [
