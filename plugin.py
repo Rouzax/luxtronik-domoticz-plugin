@@ -58,12 +58,9 @@
 import Domoticz
 import socket
 import struct
-import re
 import time
-import errno
 from translations import Language, TRANSLATIONS
 from typing import Dict, List, Optional
-from enum import Enum, auto
 
 # Debug level constants
 DEBUG_NONE = 0                   # 0000 0000 - No debugging
@@ -237,7 +234,6 @@ class DeviceUpdateTracker:
                     values_changed = True
                     diff_message += (f"sValue: {current_values['sValue']} (normalized: {norm_current}) -> "
                                     f"{new_values['sValue']} (normalized: {norm_new})")
-                    # (Removed extra logging here to avoid duplicate output)
             
             if values_changed:
                 if is_graphing:
