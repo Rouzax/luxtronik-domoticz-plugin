@@ -805,7 +805,7 @@ class BasePlugin:
                 dict(TypeName='Selector Switch', Image=15, Used=1,
                     Options={'LevelActions': '0|10',
                             'LevelNames': translate_selector_options(['Normal', 'Luxury']),
-                            'LevelOffHidden': 'true',
+                            'LevelOffHidden': 'false',
                             'SelectorStyle': '1'}),
                 translate('DHW Power Mode'), (available_writes_level_with_divider, [1, 1052])],
         ]
