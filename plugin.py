@@ -807,7 +807,7 @@ class BasePlugin:
                             'LevelNames': translate_selector_options(['Normal', 'Luxury']),
                             'LevelOffHidden': 'false',
                             'SelectorStyle': '1'}),
-                translate('DHW Power Mode'), (available_writes_level_with_divider, [1, 1052])],
+                translate('DHW Power Mode'), (available_writes_level_with_divider, [10, 1052])],
         ]
 
         class Unit:
