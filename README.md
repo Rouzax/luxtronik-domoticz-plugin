@@ -13,7 +13,7 @@ The Luxtronik plugin for Domoticz provides seamless socket communication with Lu
   Automatically create and update devices for temperature sensors, pressure readings, pump speeds, operating modes, flow rates, and energy metrics including COP (Coefficient of Performance).
 
 - **Advanced Update Mechanism:**  
-  Uses a dedicated update tracker to compare current values against new readings. Graphing devices are updated both on value change and at configurable intervals (with a default 5-minute forced update).
+  Uses a dedicated update tracker to compare current values against new readings. Graphing devices will only resend their value at set intervals (every 5 minutes) when sensor values remains constant, changes are sent immediately ensuring accurate long-term trend analysis.
 
 - **Granular Debug Logging:**  
   Multiple debug levels are available for troubleshooting, including:
