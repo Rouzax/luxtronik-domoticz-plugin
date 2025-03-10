@@ -388,11 +388,15 @@ def to_text_state(data_list: list, data_idx: int, config: list) -> dict:
     # Get current mode
     current_mode = data_list[data_idx]
 
-    # If power consumption is below threshold, return "No requirement"
+    # If the mode is cooling, override the power consumption check.
+    if current_mode == 3:
+        return {'nValue': 0, 'sValue': translate('Cooling')}
+
+    # For other modes, if power consumption is below the threshold, return "No requirement".
     if current_power <= power_threshold:
         return {'nValue': 0, 'sValue': translate('No requirement')}
 
-    # Map mode to text
+    # Otherwise, map mode to text.
     state_text = mode_names.get(current_mode, translate('No requirement'))
     return {'nValue': 0, 'sValue': state_text}
 
