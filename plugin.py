@@ -607,7 +607,8 @@ class BasePlugin:
             3: Field(translate('Heating mode'), [0, 1, 2, 3, 4]),
             4: Field(translate('Hot water mode'), [0, 1, 2, 3, 4]),
             105: Field(translate('DHW temp target'), [a for a in range(300, 651, 5)]),
-            108: Field(translate('Cooling'), [0, 1])
+            108: Field(translate('Cooling'), [0, 1]),
+            1052: Field(translate('DHW Power Mode'), [0, 1])
         }
 
         # Define selector options as separate lists
@@ -798,6 +799,15 @@ class BasePlugin:
             # Heating temperature difference (Supply - Return)
             ['READ_CALCUL', [10, 11], (calculate_temp_diff, 10),
              dict(TypeName='Custom', Used=1, Options={'Custom': '1;K'}), translate('Heating temp diff')],
+            
+            # DHW Power Mode selector switch (0 = Normal, 1 = Luxury)
+            ['READ_PARAMS', 1052, (selector_switch_level_mapping, self.available_writes[1052].get_val()),
+                dict(TypeName='Selector Switch', Image=15, Used=1,
+                    Options={'LevelActions': '0|10',
+                            'LevelNames': translate_selector_options(['Normal', 'Luxury']),
+                            'LevelOffHidden': 'true',
+                            'SelectorStyle': '1'}),
+                translate('DHW Power Mode'), (available_writes_level_with_divider, [1, 1052])],
         ]
 
         class Unit:

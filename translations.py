@@ -348,6 +348,27 @@ TRANSLATIONS = {
         Language.GERMAN: 'Heiztemp.-diff.',
         Language.FRENCH: 'Diff. temp. chauf.'
     },
+    'DHW Power Mode': {
+        Language.ENGLISH: 'DHW Power Mode',
+        Language.POLISH: 'Tryb mocy CWU',
+        Language.DUTCH: 'Warmwater modus',
+        Language.GERMAN: 'DHW-Leistungsmodus',
+        Language.FRENCH: 'Mode puissance ECS'
+    },
+    'Normal': {
+        Language.ENGLISH: 'Normal',
+        Language.POLISH: 'Normalny',
+        Language.DUTCH: 'Normaal',
+        Language.GERMAN: 'Normal',
+        Language.FRENCH: 'Normal'
+    },
+    'Luxury': {
+        Language.ENGLISH: 'Luxury',
+        Language.POLISH: 'Luksusowy',
+        Language.DUTCH: 'Luxe',
+        Language.GERMAN: 'Luxus',
+        Language.FRENCH: 'Luxe'
+    },    
 
     # Ranges (detailed descriptions, no length limit)
     'ranges': {
