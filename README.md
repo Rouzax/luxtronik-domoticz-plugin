@@ -113,11 +113,15 @@ The plugin automatically creates or updates the following devices in Domoticz ba
   - **Overall System COP:** The coefficient of performance calculated for the system.
 
 - **Operating Modes & Controls:**
-  - **Heating Mode Selector:** A selector switch to control or display the heating mode.
-  - **Hot Water Mode Selector:** A selector switch for the hot water operating mode.
+  - **Heating Mode Selector:** A selector switch to control or display the heating mode.  
+    *Options:* Automatic, 2nd heat source, Party, Holidays, Off.
+  - **Hot Water Mode Selector:** A selector switch for the hot water operating mode.  
+    *Options:* Automatic, 2nd heat source, Party, Holidays, Off.
   - **Cooling Mode Switch:** A switch to enable or disable the cooling mode.
   - **Working Mode Status:** Displays the current operating mode status as text.
   - **Temperature Offset Adjustment:** Allows fine-tuning of temperature settings.
+  - **DHW Power Mode Selector:** A selector switch to control the DHW inverter mode.  
+    *Options:* Normal and Luxury.
 
 - **System Metrics:**
   - **Flow Rate:** Measures the system’s flow rate (in liters per hour).
