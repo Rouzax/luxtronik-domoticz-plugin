@@ -10,7 +10,7 @@
         <ul>
             <li>Real-time monitoring of heat pump parameters</li>
             <li>Support for temperature readings, operating modes, and power consumption</li>
-            <li>Multi-language support (English, Polish, Dutch)</li>
+            <li>Multi-language support (English, Polish, Dutch, French, German)</li>
             <li>Configurable update intervals</li>
         </ul>
         
