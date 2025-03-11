@@ -2,7 +2,7 @@
 
 ## Overview
 
-The Luxtronik plugin for Domoticz provides seamless socket communication with Luxtronik-based heat pump controllers. Building on the work of [ajarzyn](https://github.com/ajarzyn/domoticz-luxtronic2), this version brings enhanced features including granular debug logging, robust device update tracking, and advanced multi-language support (English, Polish, Dutch, German and French). The plugin enables real-time monitoring and control of various heat pump parameters while optimizing network communications with retry logic and smart update intervals.
+The Luxtronik plugin for Domoticz provides seamless socket communication with Luxtronik-based heat pump controllers. Building on the work of [ajarzyn](https://github.com/ajarzyn/domoticz-luxtronic2), this version brings enhanced features including granular debug logging, robust device update tracking, and advanced multi-language support. The plugin enables real-time monitoring and control of various heat pump parameters while optimizing network communications with retry logic and smart update intervals.
 
 ## Features
 
@@ -28,7 +28,12 @@ The Luxtronik plugin for Domoticz provides seamless socket communication with Lu
   The heartbeat interval can be set (recommended between 15–30 seconds). Note that values greater than 30 seconds may trigger a Domoticz timeout warning, though the plugin continues to operate correctly.
 
 - **Multi-Language Support:**  
-  Available languages include English, Polish, Dutch, German and French.
+  Available languages include:
+  - English
+  - Polish
+  - Dutch
+  - German
+  - French
 
 - **Robust Socket Communication:**  
   Implements retry logic and verification of command echoes for reliable communication with the heat pump controller.
@@ -70,7 +75,7 @@ The following parameters are required to configure the plugin:
 | Address         | IP address of the Luxtronik controller               | `127.0.0.1`   |
 | Port            | TCP port of the controller (default: 8889)           | `8889`        |
 | Update Interval | Data update interval in seconds (recommended: 15-30) | `20`          |
-| Language        | Interface language (English, Polish, Dutch, French, German)          | `English`     |
+| Language        | Interface language                                   | `English`     |
 | Debug Level     | Debug log level for troubleshooting                  | `None`        |
 
 ## Created Devices
