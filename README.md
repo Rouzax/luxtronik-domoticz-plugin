@@ -70,7 +70,7 @@ The following parameters are required to configure the plugin:
 | Address         | IP address of the Luxtronik controller               | `127.0.0.1`   |
 | Port            | TCP port of the controller (default: 8889)           | `8889`        |
 | Update Interval | Data update interval in seconds (recommended: 15-30) | `20`          |
-| Language        | Interface language (English, Polish, Dutch, French German)          | `English`     |
+| Language        | Interface language (English, Polish, Dutch, French, German)          | `English`     |
 | Debug Level     | Debug log level for troubleshooting                  | `None`        |
 
 ## Created Devices
