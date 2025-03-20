@@ -10,7 +10,7 @@
         <ul>
             <li>Real-time monitoring of heat pump parameters</li>
             <li>Support for temperature readings, operating modes, and power consumption</li>
-            <li>Multi-language support (English, Polish, Dutch, French, German)</li>
+            <li>Multi-language support (English, Polish, Dutch)</li>
             <li>Configurable update intervals</li>
         </ul>
         
@@ -371,6 +371,12 @@ def to_text_state(data_list: list, data_idx: int, config: list) -> dict:
     Returns:
         dict: Device update parameters with translated status text
     """
+    
+    # If param #259 is 1, that means your system is in passive-cooling.
+    # Return "Cooling" immediately, ignoring the other logic.
+    if data_list[259] == 1:
+        return {'nValue': 0, 'sValue': translate('Cooling')}
+    
     # Operating modes based on ID_WEB_WP_BZ_akt values
     mode_names = {
         0: translate('Heating mode'),
@@ -387,10 +393,6 @@ def to_text_state(data_list: list, data_idx: int, config: list) -> dict:
 
     # Get current mode
     current_mode = data_list[data_idx]
-
-    # If the mode is cooling, override the power consumption check.
-    if current_mode == 3:
-        return {'nValue': 0, 'sValue': translate('Cooling')}
 
     # For other modes, if power consumption is below the threshold, return "No requirement".
     if current_power <= power_threshold:
