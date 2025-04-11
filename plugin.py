@@ -416,8 +416,8 @@ def calculate_temp_diff(data_list: list, indices: list, divider: float) -> dict:
     temp1 = float(data_list[indices[0]]) / divider
     temp2 = float(data_list[indices[1]]) / divider
 
-    # Calculate absolute difference
-    diff = abs(temp1 - temp2)
+    # Calculate difference
+    diff = (temp1 - temp2)
 
     # Return formatted result
     return {'sValue': str(round(diff, 1))}
