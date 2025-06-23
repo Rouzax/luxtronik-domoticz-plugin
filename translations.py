@@ -232,7 +232,7 @@ TRANSLATIONS = {
     'Room temp target': {
         Language.ENGLISH: 'Room temp target',
         Language.POLISH: 'Temp pokoj cel',
-        Language.DUTCH: 'Ruimtet. doel',
+        Language.DUTCH: 'Ruimtetemp doel',
         Language.GERMAN: 'Soll-Raumtemp.',
         Language.FRENCH: 'Temp. amb. cib.'
     },
@@ -368,7 +368,15 @@ TRANSLATIONS = {
         Language.DUTCH: 'Luxe',
         Language.GERMAN: 'Luxus',
         Language.FRENCH: 'Luxe'
-    },    
+    },
+    'Room temp setpoint': {
+        Language.ENGLISH: 'Room temp setpoint',
+        Language.POLISH: 'Temp pokoj ust',
+        Language.DUTCH: 'Ruimtetemp inst',
+        Language.GERMAN: 'Raumtemp Soll',
+        Language.FRENCH: 'Temp. amb. cons'
+    },
+    
 
     # Ranges (detailed descriptions, no length limit)
     'ranges': {

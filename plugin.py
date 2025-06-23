@@ -610,9 +610,10 @@ class BasePlugin:
             4: Field(translate('Hot water mode'), [0, 1, 2, 3, 4]),
             105: Field(translate('DHW temp target'), [a for a in range(300, 651, 5)]),
             108: Field(translate('Cooling'), [0, 1]),
-            1052: Field(translate('DHW Power Mode'), [0, 1])
+            1052: Field(translate('DHW Power Mode'), [0, 1]),
+            1148: Field(translate('Room temp setpoint'), [a for a in range(150, 301, 5)])  # 15.0–30.0°C in 0.5°C steps (raw = °C*10)
         }
-
+        
         # Define selector options as separate lists
         heating_mode_options = [
             'Automatic',
@@ -810,6 +811,11 @@ class BasePlugin:
                             'LevelOffHidden': 'false',
                             'SelectorStyle': '1'}),
                 translate('DHW Power Mode'), (available_writes_level_with_divider, [10, 1052])],
+            
+            # Actual room temperature set-point (Param 1148)
+            ['READ_PARAMS', 1148, (to_float, 10),
+             dict(TypeName='Temperature', Used=1), translate('Room temp setpoint'), (level_with_divider, 0.1)],
+
         ]
 
         class Unit:
