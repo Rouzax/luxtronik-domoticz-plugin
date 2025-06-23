@@ -814,8 +814,16 @@ class BasePlugin:
             
             # Actual room temperature set-point (Param 1148)
             ['READ_PARAMS', 1148, (to_float, 10),
-             dict(TypeName='Temperature', Used=1), translate('Room temp setpoint'), (level_with_divider, 0.1)],
-
+             dict(Type=242, Subtype=1, Used=1,
+               Options={
+                 'ValueStep':'0.5',  # 0.5°C increments
+                 'ValueMin':'15',    # min 15.0°C
+                 'ValueMax':'30',    # max 30.0°C
+                 'ValueUnit':'°C'
+               }
+             ),
+             translate('Room temp setpoint'), (level_with_divider, 0.1)
+            ],
         ]
 
         class Unit:
