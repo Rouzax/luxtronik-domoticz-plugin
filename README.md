@@ -3,6 +3,7 @@
 ## Overview
 
 The Luxtronik plugin for Domoticz provides seamless socket communication with Luxtronik-based heat pump controllers. Building on the work of [ajarzyn](https://github.com/ajarzyn/domoticz-luxtronic2), this version brings enhanced features including granular debug logging, robust device update tracking, and advanced multi-language support. The plugin enables real-time monitoring and control of various heat pump parameters while optimizing network communications with retry logic and smart update intervals.
+Also published on the [Domoticz Forum](https://forum.domoticz.com/viewtopic.php?p=329027)
 
 ## Features
 
