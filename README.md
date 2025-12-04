@@ -1,5 +1,24 @@
 # Luxtronik Heat Pump Controller Plugin for Domoticz
 
+> [!IMPORTANT]
+> ## ⚠️ This plugin has been superseded
+> 
+> **A completely refactored version is now available:** [luxtronik-domoticz-plugin-v2](https://github.com/Rouzax/luxtronik-domoticz-plugin-v2)
+> 
+> ### Why upgrade?
+> - **DomoticzEx framework** — Modern architecture with multi-instance support
+> - **Intelligent COP tracking** — Separate heating/DHW/total measurements with steady-state gating
+> - **Write protection** — Validated allowlist prevents accidental EEPROM writes
+> - **Stable device IDs** — No more orphaned devices when renaming hardware
+> - **Migration tools** — SQL scripts to preserve your historical data
+> 
+> ### Migration
+> Both plugins can run side-by-side during migration. See the [migration guide](https://github.com/Rouzax/luxtronik-domoticz-plugin-v2/blob/main/migration/README.md) for instructions.
+> 
+> **This repository will no longer receive updates.**
+
+---
+
 ## Overview
 
 The Luxtronik plugin for Domoticz provides seamless socket communication with Luxtronik-based heat pump controllers. Building on the work of [ajarzyn](https://github.com/ajarzyn/domoticz-luxtronic2), this version brings enhanced features including granular debug logging, robust device update tracking, and advanced multi-language support. The plugin enables real-time monitoring and control of various heat pump parameters while optimizing network communications with retry logic and smart update intervals.
