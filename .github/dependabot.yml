@@ -1,0 +1,19 @@
+version: 2
+updates:
+  # GitHub Actions used by the release workflow (pinned to SHAs).
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+    cooldown:
+      default-days: 7
+
+  # Dev tooling only (requirements-dev.txt); the runtime is stdlib-only.
+  - package-ecosystem: pip
+    directory: /
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+    cooldown:
+      default-days: 7
