@@ -25,6 +25,19 @@ def log_error(message: str) -> None:
     Domoticz.Error(message)
 
 
+def send_notification(subject: str, body: str) -> None:
+    """Send through every notification system Domoticz has (an empty subsystem). Best effort:
+    the caller has logged the event already, so a missing or failing notifier is ignored."""
+    send = getattr(Domoticz, "SendNotification", None)
+    if send is None:
+        return
+    try:
+        # Positional: the keyword names differ between Domoticz versions.
+        send(subject, body, 0, "", "", "")
+    except Exception as e:
+        Domoticz.Debug(f"SendNotification failed ({type(e).__name__})")
+
+
 def set_debugging(mask: int) -> None:
     Domoticz.Debugging(mask)
 

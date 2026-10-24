@@ -1,6 +1,7 @@
 [project]
 name = "luxtronik-domoticz-plugin"
-version = "2.1.2"
+# The plugin.py manifest is the only version Domoticz reads, so it is not repeated here.
+dynamic = ["version"]
 requires-python = ">=3.11"   # extended plugin settings require a recent Domoticz (Bookworm+/3.11+)
 
 [tool.ruff]
@@ -17,9 +18,9 @@ per-file-ignores = { "plugin.py" = ["E501"], "translations.py" = ["E501"] }
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-# --cov-fail-under floor: current coverage is ~56%; keep 1% slack. Ratchet up as
-# coverage grows (raise the floor in the same change that earns the gain).
-addopts = "-q --cov=. --cov-report=term-missing --cov-fail-under=55"
+# --cov-fail-under floor: about 1% below measured coverage. Ratchet up as coverage
+# grows (raise the floor in the same change that earns the gain).
+addopts = "-q --cov=. --cov-report=term-missing --cov-fail-under=67"
 
 [tool.pyright]
 # Blocking gate: pre-commit runs pyright and it is green (0 errors). Kept at

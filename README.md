@@ -33,10 +33,10 @@ Also published on the [Domoticz Forum](https://forum.domoticz.com/viewtopic.php?
   Device names and selector options update automatically when changing languages, but user customizations are preserved. Only names matching known translations are updated.
 
 - **Configurable Update Interval:**  
-  The heartbeat interval is validated and clamped to a safe range of 10-60 seconds for stability.
+  Read the heat pump every 10, 15, 20 or 30 seconds.
 
 - **Multi-Language Support:**  
-  Available languages include:
+  Device names follow the Domoticz interface language by default, or a language you choose. Available languages include:
   - English
   - Polish
   - Dutch
@@ -45,6 +45,9 @@ Also published on the [Domoticz Forum](https://forum.domoticz.com/viewtopic.php?
 
 - **Refrigerant Circuit Diagnostics:**  
   Gated diagnostic devices for deep refrigerant-side insight: condensing temperature, refrigerant lift (condensing minus evaporating, the primary COP driver), condenser approach (fouling/flow indicator), discharge headroom (margin to hot-gas cutoff), and compression ratio (flags circuit degradation when trending up).
+
+- **Update Check:**  
+  Once a day the plugin asks GitHub whether a newer release exists and announces each new version once, in the Domoticz log and through every notification system you have set up in Domoticz. It can be limited to stable releases or turned off.
 
 - **Granular Debug Logging:**  
   Multiple debug levels for efficient troubleshooting:
@@ -57,9 +60,9 @@ Also published on the [Domoticz Forum](https://forum.domoticz.com/viewtopic.php?
 
 ## Requirements
 
-- Domoticz home automation system (2024.4+ recommended for full DomoticzEx support)
+- Domoticz 2026.1 or newer (the settings page uses named plugin settings, which older versions do not have)
 - A Luxtronik-based heat pump controller with network access
-- Python 3.x
+- Python 3.11 or newer
 
 ## Installation
 
@@ -110,10 +113,12 @@ git clone https://github.com/Rouzax/luxtronik-domoticz-plugin-v2.git luxtronikex
 2. **Enable the plugin**:
    - In Domoticz, navigate to **Setup** → **Hardware**
    - Add a new hardware device and select **Luxtronik Heat Pump Controller v2**
-   - Enter the configuration details
-   - Click **Add**
+   - Enter the **IP address** of your heat pump controller. The other settings work as they are; if you have a WZSV, set **Pump power compensation** to your model for a more accurate COP (see [Configuration](#configuration))
+   - Click **Add**. The plugin creates its devices on the first start
   
 ### Upgrading / migrating
+
+> **Upgrading from 2.2.x or older?** The settings moved to new fields. Your previous values stay in use until you next save the plugin's hardware page, but that page shows the defaults, not your values. Before pressing **Update**, choose your values again. The plugin lists them in the Domoticz log at every start until you do ("Settings moved to new fields ... Previous values: ..."), and sends the same list once through your Domoticz notification systems. Saving without choosing them again resets them to the defaults shown. IP address and port are not affected. An update interval above 30 seconds is now limited to 30, and an interval that is not one of the options keeps running until you pick the nearest one.
 
 Your devices and history are tied to the hardware instance (the DeviceID is `luxtronikex_hw<HardwareID>`), not to the plugin folder, so you can change folders or switch install method without losing anything, as long as you keep the same hardware entry in Domoticz.
 
@@ -140,16 +145,44 @@ One rule: keep exactly **one** copy of the plugin. Domoticz scans every `plugins
 
 ## Configuration
 
-| Parameter       | Description                                         | Default     |
-|-----------------|-----------------------------------------------------|-------------|
-| Address         | IP address of the Luxtronik controller              | `127.0.0.1` |
-| Port            | TCP port of the controller                          | `8889`      |
-| Max COP Value   | Maximum COP to accept; higher values are discarded as measurement artifacts. Leave empty to disable | `30`        |
-| Update Interval | Data update interval in seconds (clamped to 10-60) | `20`        |
-| Language        | Interface language                                  | `English`   |
-| Pump Power Compensation | Add estimated circulation pump power to compressor reading for more accurate COP | `Off` |
-| Pump Power Ranges (W) | HUP min, HUP max, VBO min, VBO max — pump power range in watts | `2,60,3,140` |
-| Debug Level     | Debug log level for troubleshooting                 | `None`      |
+| Setting | Description | Default |
+|---------|-------------|---------|
+| IP address | IP address of the Luxtronik controller | `127.0.0.1` |
+| Port | TCP port of the controller | `8889` |
+| Language | Language of device names. **Same as Domoticz** uses the Domoticz interface language when it is one of the supported languages, otherwise English. Names you changed yourself are kept | Same as Domoticz |
+| Update interval | How often the heat pump is read: 10, 15, 20 or 30 seconds | 20 seconds |
+| Pump power compensation | Adds estimated circulation pump power to the compressor reading; see [Pump power compensation](#pump-power-compensation) | Off |
+| Heating pump min / max (W), Brine pump min / max (W) | Pump power ranges, shown only when Pump power compensation is **Custom** | `2` / `60`, `3` / `140` |
+| Max COP value | COP readings above this are discarded as measurement artifacts. 0 or empty turns the filter off | `30` |
+| Update check | Daily check for a newer release; see [Update check](#update-check) | Automatic |
+| Debug level | Debug log level for troubleshooting | None |
+
+### Pump power compensation
+
+The controller's power reading only measures compressor power, which makes COP look better than it is. Choose your heat pump model and the plugin adds the estimated power of the heating circulation pump (HUP) and the brine pump (VBO), based on their current speed, to the power reading. All power and COP devices then use the corrected value.
+
+| Option | Heating pump | Brine pump |
+|--------|--------------|------------|
+| WZSV 62 | 2 to 60 W | 5 to 87 W |
+| WZSV 92 | 2 to 60 W | 3 to 140 W |
+| WZSV 122 | 2 to 60 W | 3 to 180 W |
+| WZSV 162 | 2 to 60 W | 3 to 180 W |
+| Custom | the four values you enter | |
+
+The model values come from the technical data in the WZSV installation manual and apply to the variants with and without cooling. For another heat pump, or after replacing a pump, choose **Custom** and enter the minimum and maximum power from the pump's data. If a custom value is invalid (not a number, negative, or a minimum above its maximum), compensation stays off and the Domoticz log names the field to correct.
+
+### Update check
+
+Once a day (the first check 5 minutes after the plugin starts) the plugin asks GitHub for its list of releases. When a newer version exists it writes one line to the Domoticz log and sends one notification through every notification system configured in Domoticz (**Setup → Settings → Notifications**), with a link to the release page. Each version is announced once; the plugin remembers it across restarts. The check sends nothing about you or your heat pump, and it never installs anything.
+
+| Option | What is reported |
+|--------|------------------|
+| Automatic | Betas while you run a beta, only stable releases while you run a stable one |
+| Stable releases only | Stable releases |
+| Including betas | Stable releases and betas |
+| Off | Nothing; GitHub is never contacted |
+
+If GitHub cannot be reached the check tries again a day later; the failure is logged only at the Comms debug level.
 
 ### COP Accuracy Recommendation
 
@@ -161,7 +194,7 @@ When disabled (default), Domoticz fills in the last received value every 5 minut
 
 > **Note:** This is a system-wide Domoticz setting that affects all devices, not just this plugin.
 
-The controller's power reading only measures compressor power. Enable **Pump Power Compensation** to include estimated circulation pump power for true system COP. The default pump power ranges match the WZSV 92K3M — check your manual for other models.
+The controller's power reading only measures compressor power; set [Pump power compensation](#pump-power-compensation) to your model for a true system COP.
 
 ### Security Notes
 
@@ -417,9 +450,6 @@ Debug messages appear in the Domoticz log (**Setup → Log**). BASIC level messa
 - Check the correct port (default: 8889)
 - Ensure no firewall blocks the connection
 
-### Timeout Warnings
-If the update interval exceeds 30 seconds, Domoticz may show timeout warnings. This is expected behavior—the plugin continues to function correctly.
-
 ### Missing Devices
 After adding the plugin, devices are created automatically. If devices appear missing:
 1. Check **Setup → Devices** for unused devices
@@ -433,7 +463,10 @@ Device names only update automatically if they match a known translation. User-c
 1. Enable "Only add newly received values" in Domoticz settings
 2. Ensure you're looking at periods when the heat pump was actively running
 3. COP is only logged during steady-state operation (compressor at target speed)
-4. Adjust the Max COP Value setting if legitimate readings are being filtered (default 30), or leave it empty to disable filtering
+4. Adjust the Max COP value setting if legitimate readings are being filtered (default 30), or set it to 0 or empty to disable filtering
+
+### Settings Back at Defaults After Upgrading
+The settings moved to new fields in this version. Saving the hardware page before choosing your values again stores the defaults it shows. Choose your values again and press **Update**. If you still have the notification or the log line from before that save ("Settings moved to new fields ... Previous values: ..."), it lists the values to choose.
 
 ### Write Commands Not Working
 The plugin validates all write operations against an allowlist. Check the debug log for "WRITE BLOCKED" messages. Only the control devices (units 10-16) support write operations.
@@ -466,11 +499,22 @@ sudo systemctl start domoticz
 
 | File | Purpose |
 |------|---------|
-| `plugin.py` | Main plugin code with DomoticzEx framework integration |
-| `translations.py` | Multi-language translations for device names and descriptions |
-| `addresses.py` | Luxtronik protocol address constants |
-| `context.py` | Shared plugin context and state |
+| `plugin.py` | Settings manifest, Domoticz callbacks and the plugin lifecycle |
+| `plugin_config.py` | Reads the hardware settings, including values left in the fields used by 2.2 and older |
+| `domoticz_api.py` | The only module that calls Domoticz (logging, devices, stored state, notifications) |
+| `connection.py` | Socket connection to the Luxtronik controller, with the write allowlist |
+| `addresses.py` | Luxtronik protocol address constants and configuration limits |
+| `device_specs_table.py` | The table of every device the plugin creates |
+| `device_spec.py` | Device specification dataclasses |
+| `device_factory.py` | Builds device specifications and converters |
 | `converters.py` | Data converter classes (DataConverter hierarchy) |
+| `device_update_tracker.py` | Decides when a device value is written to Domoticz |
+| `name_ownership.py` | Tracks which device names the plugin wrote, so names you changed are kept |
+| `translations.py` | Multi-language translations for device names and descriptions |
+| `translation_manager.py` | Selects the language and looks up translations |
+| `debug_logger.py` | Debug level handling for log output |
+| `context.py` | Shared plugin context and state |
+| `update_check.py` | Daily GitHub release check, shared with the author's other plugins |
 | `README.md` | This documentation file |
 | `migration/` | Migration tools for upgrading from legacy plugin |
 | `migration/README.md` | Migration instructions |
@@ -481,10 +525,12 @@ sudo systemctl start domoticz
 ### Development Notes
 
 - The plugin uses the DomoticzEx framework (`import DomoticzEx`)
-- Device Unit IDs are organized into 14 logical groups (see `_build_device_specs()`)
+- Every Domoticz call goes through `domoticz_api.py`, so the other modules can be tested without Domoticz
+- Device Unit IDs are organized into 14 logical groups (see `build_device_specs()` in `device_specs_table.py`)
 - Write operations require addresses to be in `available_writes` dictionary
 - Gated converters check compressor frequency before reporting values (temperature difference converters also pass during passive cooling)
 - Translations use `spec_id` as the lookup key
+- `update_check.py` and `tests/test_update_check.py` are maintained in [home-connect-domoticz-plugin](https://github.com/Rouzax/home-connect-domoticz-plugin) and copied here unchanged; make changes there first
 
 ## Support
 
@@ -493,6 +539,12 @@ Building tools that solve my own problems and sharing them in the hope they solv
 [![ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/O0W221GBUG)
 
 ## Changelog
+
+### Unreleased
+- Changed: the settings page is reorganised. Pump power compensation is chosen by heat pump model (WZSV 62, 92, 122, 162) with values from the WZSV manual, or Custom with four separate fields; Language defaults to "Same as Domoticz"; the update interval is a choice of 10, 15, 20 or 30 seconds (the maximum is now 30); invalid custom pump values are reported by field. Existing values keep working until the hardware page is next saved, and the plugin lists them in the log and in a one-time notification; choose them again before saving (see [Upgrading / migrating](#upgrading--migrating)).
+- Added: daily update check with a new **Update check** setting (Automatic, Stable releases only, Including betas, Off); a newer release is announced once in the log and through every Domoticz notification system.
+- Fixed: the description of Unit 202 "Cooling release" was English in every language; it is now translated, and existing devices pick it up on the next start unless you edited the description.
+- Requires Domoticz 2026.1 or newer and Python 3.11 or newer.
 
 ### Version 2.1.2
 - Fixed: control commands (mode selectors, setpoints) could silently stop working after a plugin restart. The plugin no longer registers custom device classes, which failed to register on a reload; command handling now uses the standard module-level handler, so selector switches and setpoints reliably send their validated writes. This also removes the two "class registration failed" errors that appeared in the Domoticz log at startup. Existing devices are unaffected (no re-creation or renaming).

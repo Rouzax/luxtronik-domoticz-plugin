@@ -5,7 +5,14 @@ and a Unit/Devices/Units structure whose Unit.Create() registers into Devices.
 A fuller stub (onStart/onHeartbeat integration) is deferred to refactor step 4.
 """
 
-calls = {"status": [], "debug": [], "error": [], "debugging": [], "heartbeat": []}
+calls = {
+    "status": [],
+    "debug": [],
+    "error": [],
+    "debugging": [],
+    "heartbeat": [],
+    "notification": [],
+}
 Devices = {}
 _config: dict = {}
 
@@ -66,3 +73,7 @@ def Debugging(mask):
 
 def Heartbeat(seconds):
     calls["heartbeat"].append(seconds)
+
+
+def SendNotification(*args):
+    calls["notification"].append(args)

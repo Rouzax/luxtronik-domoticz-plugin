@@ -51,3 +51,23 @@ def test_load_state_returns_none_when_configuration_raises(monkeypatch):
 
     monkeypatch.setattr(domoticz_api.Domoticz, "Configuration", boom)
     assert domoticz_api.load_state() is None
+
+
+def test_send_notification_uses_every_subsystem():
+    domoticz_api.send_notification("subj", "body")
+    assert stub.calls["notification"] == [("subj", "body", 0, "", "", "")]
+
+
+def test_send_notification_skipped_without_framework_support(monkeypatch):
+    monkeypatch.delattr(stub, "SendNotification")
+    domoticz_api.send_notification("subj", "body")  # must not raise
+    assert stub.calls["notification"] == []
+
+
+def test_send_notification_failure_is_swallowed(monkeypatch):
+    def boom(*args):
+        raise RuntimeError("no notifier")
+
+    monkeypatch.setattr(stub, "SendNotification", boom)
+    domoticz_api.send_notification("subj", "body")  # must not raise
+    assert any("RuntimeError" in m for m in stub.calls["debug"])

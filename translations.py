@@ -990,30 +990,6 @@ DEVICE_TRANSLATIONS: Dict[str, Dict[str, Dict[Language, str]]] = {
             Language.POLISH: "Obliczona przez sterownik temperatura kondensacji (nasycenia) z calc[233].\nPotwierdzona przez t_sat(HD/100 + 1.013): ten sam adres co linia cieczowa, poprawna interpretacja to temp. kondensacji.\nUzywana do obliczen wzniosu czynnika i roznicy skraplacza.\n\n⚡ BRAMKOWANY: Aktualizuje tylko w stanie ustalonym.",
         },
     },
-    "subcooling": {
-        "name": {
-            Language.ENGLISH: "Subcooling",
-            Language.DUTCH: "Onderkoeling",
-            Language.GERMAN: "Unterkühlung",
-            Language.FRENCH: "Sous-refroidissement",
-            Language.POLISH: "Dochłodzenie",
-        },
-        "description": {
-            Language.ENGLISH: "Difference between condensing temp and liquid line temp.\nIndicates refrigerant charge health.\nTrending changes may signal refrigerant loss or restriction.\n\n⚡ GATED: Only updates during steady-state operation.",
-        },
-    },
-    "condensing_pressure": {
-        "name": {
-            Language.ENGLISH: "Condensing pressure",
-            Language.DUTCH: "Condensatiedruk",
-            Language.GERMAN: "Kondensationsdruck",
-            Language.FRENCH: "Pression condensation",
-            Language.POLISH: "Ciśnienie skraplania",
-        },
-        "description": {
-            Language.ENGLISH: "Condensing pressure from firmware calculation.\nCompanion to high pressure (LIN bus transducer).\n\n⚡ GATED: Only updates during steady-state operation.\nEquilibrates to ambient when idle.",
-        },
-    },
     "refrigerant_lift": {
         "name": {
             Language.ENGLISH: "Refrigerant lift",
@@ -1120,6 +1096,10 @@ DEVICE_TRANSLATIONS: Dict[str, Dict[str, Dict[Language, str]]] = {
         },
         "description": {
             Language.ENGLISH: "Countdown timer showing when cooling mode will be permitted.\nDisplays remaining time in minutes.",
+            Language.DUTCH: "Afteltimer tot koeling wordt toegestaan.\nToont de resterende tijd in minuten.",
+            Language.GERMAN: "Countdown bis der Kühlbetrieb freigegeben wird.\nZeigt die verbleibende Zeit in Minuten.",
+            Language.FRENCH: "Compte à rebours avant l'autorisation du mode refroidissement.\nAffiche le temps restant en minutes.",
+            Language.POLISH: "Odliczanie do zezwolenia na tryb chłodzenia.\nPokazuje pozostały czas w minutach.",
         },
     },
     # =========================================================================

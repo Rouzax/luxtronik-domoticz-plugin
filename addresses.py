@@ -108,6 +108,7 @@ class ConfigLimits:
     """Configuration limits for plugin parameters."""
 
     HEARTBEAT_MIN = 10
-    HEARTBEAT_MAX = 60
+    # Matches the longest Update interval option; a legacy value above it is clamped.
+    HEARTBEAT_MAX = 30
     HEARTBEAT_DEFAULT = 20
     SETTLING_SECONDS = 120  # Steady-state settling time before gated values are trusted
