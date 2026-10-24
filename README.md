@@ -540,11 +540,16 @@ Building tools that solve my own problems and sharing them in the hope they solv
 
 ## Changelog
 
-### Unreleased
+### Version 3.0.0
 - Changed: the settings page is reorganised. Pump power compensation is chosen by heat pump model (WZSV 62, 92, 122, 162) with values from the WZSV manual, or Custom with four separate fields; Language defaults to "Same as Domoticz"; the update interval is a choice of 10, 15, 20 or 30 seconds (the maximum is now 30); invalid custom pump values are reported by field. Existing values keep working until the hardware page is next saved, and the plugin lists them in the log and in a one-time notification; choose them again before saving (see [Upgrading / migrating](#upgrading--migrating)).
 - Added: daily update check with a new **Update check** setting (Automatic, Stable releases only, Including betas, Off); a newer release is announced once in the log and through every Domoticz notification system.
 - Fixed: the description of Unit 202 "Cooling release" was English in every language; it is now translated, and existing devices pick it up on the next start unless you edited the description.
 - Requires Domoticz 2026.1 or newer and Python 3.11 or newer.
+
+### Version 2.2.0
+- Manual device renames are now respected permanently: the plugin never overwrites a name you set, on restart or when the plugin language changes. Previously a rename could be reverted if it matched one of the plugin's translated names in another language.
+- Changing the plugin language re-translates only the devices you have not customized. The same protection covers device descriptions and selector option labels, tracked per device. Existing installs migrate automatically on the first start after the upgrade.
+- Internal: the plugin is split into focused modules behind a single Domoticz interface module, with type-checking and test-coverage gates. No change to device numbers, names, or values.
 
 ### Version 2.1.2
 - Fixed: control commands (mode selectors, setpoints) could silently stop working after a plugin restart. The plugin no longer registers custom device classes, which failed to register on a reload; command handling now uses the standard module-level handler, so selector switches and setpoints reliably send their validated writes. This also removes the two "class registration failed" errors that appeared in the Domoticz log at startup. Existing devices are unaffected (no re-creation or renaming).
