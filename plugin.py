@@ -2,7 +2,7 @@
 Luxtronik Heat Pump Controller Plugin v2 - Refactored for DomoticzEx Framework
 Author: Rouzax, 2025 (Refactored)
 
-<plugin key="luxtronikex" name="Luxtronik Heat Pump Controller v2" author="Rouzax" version="2.2.0" externallink="https://github.com/Rouzax/luxtronik-domoticz-plugin-v2">
+<plugin key="luxtronikex" name="Luxtronik Heat Pump Controller v2" author="Rouzax" version="3.0.0" externallink="https://github.com/Rouzax/luxtronik-domoticz-plugin-v2">
     <description>
         <h2>Luxtronik Heat Pump Controller Plugin</h2><br/>
         <p>This plugin connects to Luxtronik-based heat pump controllers using socket communication.</p>
@@ -18,9 +18,8 @@ Author: Rouzax, 2025 (Refactored)
 
         <h3>Configuration Notes:</h3>
         <ul>
-            <li>Default port for Luxtronik is typically 8889</li>
-            <li>Update interval is clamped to 10-60 seconds for stability</li>
-            <li>Values greater than 30 seconds will trigger a Domoticz timeout warning, but the plugin will continue to function correctly</li>
+            <li>Requires Domoticz 2026.1 or newer</li>
+            <li>Upgrading from 2.2.x or older: your previous settings stay in use until you save this page, and the fields below show defaults. Choose your values again before pressing Update; the Domoticz log and a one-time notification list them</li>
         </ul>
 
         <h3>Security Notes:</h3>
@@ -33,52 +32,68 @@ Author: Rouzax, 2025 (Refactored)
         <h3>COP Accuracy Note:</h3>
         <p>For accurate COP averages over time, enable: <b>Settings → Log History → 'Only add newly received values to the Log'</b></p>
         <p>When disabled, Domoticz fills in the last received value every 5 minutes even when the heat pump is idle, skewing COP averages.</p>
-        <p>The controller's power reading only measures compressor power. Enable 'Pump Power Compensation' to include estimated circulation pump power for true system COP.</p>
+        <p>The controller's power reading only measures compressor power. Set 'Pump power compensation' to your model to include estimated circulation pump power for true system COP.</p>
     </description>
     <params>
-        <param field="Address" label="Heat Pump IP Address" width="200px" required="true" default="127.0.0.1">
-            <description>IP address of your Luxtronik controller</description>
+        <param field="Address" label="IP address" width="200px" required="true" default="127.0.0.1">
+            <description>IP address of your Luxtronik heat pump controller</description>
         </param>
-        <param field="Port" label="Heat Pump Port" width="60px" required="true" default="8889">
-            <description>TCP port of your Luxtronik controller (default: 8889)</description>
+        <param field="Port" label="Port" width="60px" required="true" default="8889">
+            <description>TCP port of the controller; 8889 unless you changed it</description>
         </param>
-        <param field="Mode1" label="Max COP Value" width="75px" required="false" default="30">
-            <description>Maximum COP value to accept. Readings above this are discarded as measurement artifacts. Leave empty to disable filtering.</description>
-        </param>
-        <param field="Mode2" label="Update Interval" width="150px" required="true" default="20">
-            <description>Data update interval in seconds (will be clamped to 10-60)</description>
-        </param>
-        <param field="Mode3" label="Language" width="150px">
-            <description>Select interface language</description>
+        <param field="DeviceLanguage" label="Language" width="160px" default="auto">
+            <description>Language of device names. Names you changed yourself are kept.</description>
             <options>
-                <option label="English" value="0" default="true"/>
-                <option label="Polish" value="1"/>
-                <option label="Dutch" value="2"/>
-                <option label="German" value="3"/>
-                <option label="French" value="4"/>
+                <option label="Same as Domoticz" value="auto" default="true"/>
+                <option label="English" value="en"/>
+                <option label="Polski" value="pl"/>
+                <option label="Nederlands" value="nl"/>
+                <option label="Deutsch" value="de"/>
+                <option label="Français" value="fr"/>
             </options>
         </param>
-        <param field="Mode4" label="Pump Power Compensation" width="150px">
-            <description>Add estimated circulation pump power to compressor reading for more accurate COP. Requires pump speed data from controller.</description>
+        <param field="UpdateInterval" label="Update interval" width="160px" default="20">
+            <description>How often the plugin reads the heat pump</description>
             <options>
-                <option label="Off" value="0" default="true"/>
-                <option label="On" value="1"/>
+                <option label="10 seconds" value="10"/>
+                <option label="15 seconds" value="15"/>
+                <option label="20 seconds" value="20" default="true"/>
+                <option label="30 seconds" value="30"/>
             </options>
         </param>
-        <param field="Mode5" label="Pump Power Ranges (W)" width="200px" required="false" default="2,60,3,140">
-            <description>
-                <table border="1" cellpadding="3" cellspacing="0" style="margin:4px 0">
-                    <tr><th>Position</th><th>Pump</th><th>Default (W)</th></tr>
-                    <tr><td>1</td><td>HUP min</td><td>2</td></tr>
-                    <tr><td>2</td><td>HUP max</td><td>60</td></tr>
-                    <tr><td>3</td><td>VBO min</td><td>3</td></tr>
-                    <tr><td>4</td><td>VBO max</td><td>140</td></tr>
-                </table>
-                Default values are for WZSV 92K3M. Check your manual for other models.
-            </description>
+        <param field="PumpCompensation" label="Pump power compensation" width="220px" default="off">
+            <description>The controller measures compressor power only. Choose your heat pump model to add the estimated power of the heating and brine circulation pumps, for a true system COP; the values come from the WZSV manual. Choose Custom to enter the pump power ranges yourself, for another model or different pumps.</description>
+            <options>
+                <option label="Off" value="off" default="true"/>
+                <option label="WZSV 62" value="wzsv62"/>
+                <option label="WZSV 92" value="wzsv92"/>
+                <option label="WZSV 122" value="wzsv122"/>
+                <option label="WZSV 162" value="wzsv162"/>
+                <option label="Custom" value="custom"/>
+            </options>
         </param>
-        <param field="Mode6" label="Debug Level" width="150px">
-            <description>Select debug categories to enable</description>
+        <param field="HupMinW" label="Heating pump min (W)" type="number" min="0" step="1" width="75px" default="2" visible_when="PumpCompensation=custom">
+        </param>
+        <param field="HupMaxW" label="Heating pump max (W)" type="number" min="0" step="1" width="75px" default="60" visible_when="PumpCompensation=custom">
+        </param>
+        <param field="VboMinW" label="Brine pump min (W)" type="number" min="0" step="1" width="75px" default="3" visible_when="PumpCompensation=custom">
+        </param>
+        <param field="VboMaxW" label="Brine pump max (W)" type="number" min="0" step="1" width="75px" default="140" visible_when="PumpCompensation=custom">
+        </param>
+        <param field="MaxCop" label="Max COP value" type="number" min="0" step="0.1" width="75px" default="30">
+            <description>COP readings above this are discarded as measurement artifacts. 0 or empty turns the filter off.</description>
+        </param>
+        <param field="UpdateCheck" label="Update check" width="220px" default="auto">
+            <description>Once a day the plugin asks GitHub whether a newer version exists, and announces it once through the Domoticz notification systems and in the log. Automatic reports betas while you run a beta and only stable releases while you run a stable one. It sends nothing about you or your heat pump; Off stops the check.</description>
+            <options>
+                <option label="Automatic" value="auto" default="true"/>
+                <option label="Stable releases only" value="stable"/>
+                <option label="Including betas" value="beta"/>
+                <option label="Off" value="off"/>
+            </options>
+        </param>
+        <param field="DebugLevel" label="Debug level" width="220px" default="0">
+            <description>None for normal use. Raise it only while troubleshooting; the higher levels fill the log quickly.</description>
             <options>
                 <option label="None" value="0" default="true"/>
                 <option label="Basic" value="1"/>
@@ -92,10 +107,12 @@ Author: Rouzax, 2025 (Refactored)
 </plugin>
 """
 
+import queue
 from typing import Any, Dict, Optional, Tuple
 
 import domoticz_api
 import name_ownership
+import update_check
 from addresses import ConfigLimits, LuxtronikAddress, SocketCommand
 from connection import ConnectionManager
 from context import DebugLevel
@@ -105,7 +122,7 @@ from device_factory import DeviceFactory
 from device_spec import DeviceSpec, Field
 from device_specs_table import build_device_specs
 from device_update_tracker import DeviceUpdateTracker
-from plugin_config import read_plugin_config
+from plugin_config import carry_over_notice, read_plugin_config
 from translation_manager import TranslationManager
 from translations import DEVICE_TRANSLATIONS, SELECTOR_OPTIONS, WORKING_MODE_STATUSES
 
@@ -119,6 +136,8 @@ _heartbeat_interval: int = ConfigLimits.HEARTBEAT_DEFAULT
 # Global translation manager
 _translator = TranslationManager()
 
+REPOSITORY = "Rouzax/luxtronik-domoticz-plugin-v2"
+
 
 # =============================================================================
 # Module-level spec storage (for command handling across restarts)
@@ -128,7 +147,8 @@ _translator = TranslationManager()
 # There is no clean way to inject dependencies into Unit instances at runtime,
 # so we use module-level storage that is populated during plugin initialization.
 # This pattern is safe because:
-# 1. Domoticz runs plugins single-threaded per hardware instance
+# 1. Domoticz runs plugin callbacks on one thread per hardware instance (the update-check
+#    thread never touches these; it only posts to a queue the heartbeat drains)
 # 2. The globals are only written during onStart() and cleared during onStop()
 # 3. Each hardware instance has its own Python interpreter context
 _unit_specs: Dict[Tuple[str, int], "DeviceSpec"] = {}  # (DeviceID, Unit) -> Spec
@@ -157,6 +177,14 @@ class LuxtronikPlugin:
         self._auto_names: dict = {}
         self._migrating: bool = False
         self._state_dirty: bool = False
+        # auto_names is written only once something was claimed: its absence from the stored
+        # blob is what keeps an install in the migration bootstrap (see _load_state).
+        self._names_persisted: bool = False
+        self._update_notified: Optional[str] = None
+        self._settings_notice_sent: bool = False
+        self._plugin_version: str = ""
+        self._updates: "queue.Queue[update_check.UpdateResult]" = queue.Queue()
+        self._checker: Optional[update_check.UpdateChecker] = None
 
     def _get_device_id(self) -> str:
         """Generate stable DeviceID based on HardwareID.
@@ -519,7 +547,7 @@ class LuxtronikPlugin:
         """Parse and apply the max COP limit to the COP converter.
 
         Args:
-            raw_value: String from Parameters['Mode1'].
+            raw_value: The Max COP setting as entered.
                        Empty string or '0' disables filtering.
                        Positive float sets the upper COP limit.
         """
@@ -541,31 +569,38 @@ class LuxtronikPlugin:
         except ValueError:
             DeviceFactory._cop_converter.max_cop = None
             _logger.warning(
-                f"Invalid Max COP value '{raw_value}', filter disabled. "
-                f"Expected a positive number."
+                f"Invalid Max COP value '{raw_value}', filter disabled. Expected a positive number."
             )
 
-    def _configure_pump_compensation(self, mode4: str, mode5: str) -> None:
+    def _configure_pump_compensation(self, enabled: bool, ranges_raw: tuple[str, ...]) -> None:
         """Parse pump power compensation settings.
 
         Args:
-            mode4: '0' (off) or '1' (on)
-            mode5: 'HUP_min,HUP_max,VBO_min,VBO_max' in watts
+            enabled: whether compensation is switched on
+            ranges_raw: HUP min, HUP max, VBO min, VBO max in watts, unparsed
         """
-        self._pump_compensation_enabled = mode4 == "1"
+        self._pump_compensation_enabled = enabled
         self._pump_power_ranges = None
 
         if not self._pump_compensation_enabled:
             return
 
         try:
-            parts = [float(x.strip()) for x in mode5.split(",")]
-            if len(parts) != 4:
-                raise ValueError(f"Expected 4 values, got {len(parts)}")
-            if any(p < 0 for p in parts):
-                raise ValueError("Negative power values not allowed")
-            if parts[0] > parts[1] or parts[2] > parts[3]:
-                raise ValueError("Min must not exceed max")
+            if len(ranges_raw) != 4:
+                raise ValueError(f"expected 4 values, got {len(ranges_raw)}")
+            names = ("Heating pump min", "Heating pump max", "Brine pump min", "Brine pump max")
+            parts = []
+            for name, raw in zip(names, ranges_raw, strict=True):
+                try:
+                    value = float(raw.strip())
+                except ValueError:
+                    raise ValueError(f"{name} '{raw.strip()}' is not a number") from None
+                if value < 0:
+                    raise ValueError(f"{name} {value:g} W is negative")
+                parts.append(value)
+            for pump, low, high in (("Heating pump", 0, 1), ("Brine pump", 2, 3)):
+                if parts[low] > parts[high]:
+                    raise ValueError(f"{pump} min {parts[low]:g} W is above max {parts[high]:g} W")
             self._pump_power_ranges = {
                 "hup_min": parts[0],
                 "hup_max": parts[1],
@@ -577,7 +612,10 @@ class LuxtronikPlugin:
                 DebugLevel.BASIC,
             )
         except (ValueError, IndexError) as e:
-            _logger.error(f"Invalid pump power ranges '{mode5}': {e}. Disabling compensation.")
+            _logger.error(
+                f"Pump power compensation off: {e} (values '{','.join(ranges_raw)}'). "
+                "Correct them on the hardware page."
+            )
             self._pump_compensation_enabled = False
 
     @staticmethod
@@ -678,6 +716,7 @@ class LuxtronikPlugin:
 
         try:
             cfg = read_plugin_config(_parameters())
+            self._plugin_version = cfg.plugin_version
 
             # Setup debugging
             _logger.level = cfg.debug_level
@@ -727,19 +766,19 @@ class LuxtronikPlugin:
 
             # Configure max COP limit
             self._configure_max_cop(cfg.max_cop_raw)
-            self._configure_pump_compensation(cfg.pump_comp_enable_raw, cfg.pump_comp_params_raw)
+            self._configure_pump_compensation(cfg.pump_comp_enabled, cfg.pump_ranges_raw)
 
             # Create devices (this also initializes available_writes)
-            blob = domoticz_api.load_state()
-            self._migrating = blob is None
-            self._auto_names = (blob or {}).get("auto_names", {})
+            self._load_state()
+            self._announce_carry_over(carry_over_notice(cfg))
             self.create_devices()
             # Persist provenance only when something was claimed or changed this run.
             # An install whose devices are all user-renamed claims nothing, leaves
-            # _state_dirty False, writes no blob, and stays migrating on the next
+            # _state_dirty False, writes no auto_names, and stays migrating on the next
             # onStart -- a harmless no-op, since there is nothing owned to reconcile.
             if self._state_dirty:
-                domoticz_api.save_state({"v": 1, "auto_names": self._auto_names})
+                self._names_persisted = True
+                self._persist()
 
             # Enable writes only for known safe addresses
             # These are the ONLY addresses that can be written to
@@ -749,6 +788,8 @@ class LuxtronikPlugin:
                 f"Write protection enabled for {len(allowed_write_addresses)} addresses",
                 DebugLevel.BASIC,
             )
+
+            self._start_update_check(cfg.update_check)
 
             # Initial update
             self.update_all()
@@ -770,6 +811,11 @@ class LuxtronikPlugin:
 
         _logger.log("Plugin stopping", DebugLevel.BASIC)
 
+        # Not joined: a daemon thread, and a check in flight may take its full timeout.
+        if self._checker is not None:
+            self._checker.stop()
+            self._checker = None
+
         if self.connection:
             # Disable writes before closing
             self.connection.disable_writes()
@@ -785,7 +831,87 @@ class LuxtronikPlugin:
     def onHeartbeat(self) -> None:
         """Handle periodic updates."""
         _logger.log("Heartbeat triggered", DebugLevel.VERBOSE)
+        # Own guard: a failed announcement must not skip reading the heat pump.
+        try:
+            self._announce_updates()
+        except Exception as e:
+            _logger.error("Update announcement failed", exc=e)
         self.update_all()
+
+    def _load_state(self) -> None:
+        blob = domoticz_api.load_state() or {}
+        # Migrating is keyed on auto_names, not on the blob existing: the update check also
+        # stores state, which must not end the bootstrap for an install that has claimed
+        # nothing yet.
+        self._names_persisted = "auto_names" in blob
+        self._migrating = not self._names_persisted
+        self._auto_names = blob.get("auto_names", {})
+        self._update_notified = blob.get("update_notified")
+        self._settings_notice_sent = bool(blob.get("settings_notice_sent"))
+
+    def _persist(self) -> None:
+        """Store the plugin state blob. Domoticz replaces the whole blob on every write, so
+        each write carries every key."""
+        state: Dict[str, Any] = {"v": 1}
+        if self._names_persisted:
+            state["auto_names"] = self._auto_names
+        if self._update_notified:
+            state["update_notified"] = self._update_notified
+        if self._settings_notice_sent:
+            state["settings_notice_sent"] = True
+        domoticz_api.save_state(state)
+
+    def _announce_carry_over(self, notice: Optional[str]) -> None:
+        """Log the carry-over notice at every start, and notify once: saving the hardware page
+        unread resets the values, and many users never open the log."""
+        if not notice:
+            return
+        domoticz_api.log_status(notice)
+        if self._settings_notice_sent:
+            return
+        domoticz_api.send_notification(
+            "Luxtronik plugin: check your settings before saving", notice
+        )
+        self._settings_notice_sent = True
+        self._persist()
+
+    def _start_update_check(self, channel: str) -> None:
+        # Domoticz passes the manifest version; without it there is nothing to compare against.
+        if channel == "off" or not self._plugin_version:
+            return
+        self._checker = update_check.UpdateChecker(
+            REPOSITORY,
+            self._plugin_version,
+            channel,
+            self._updates,
+            user_agent=f"luxtronikex/{self._plugin_version} update-check",
+        )
+        self._checker.start()
+
+    def _announce_updates(self) -> None:
+        """Announce each newer version once: a log line and one notification through every
+        notification system Domoticz has (an empty subsystem)."""
+        while True:
+            try:
+                result = self._updates.get_nowait()
+            except queue.Empty:
+                return
+            if result.error:
+                _logger.log(f"Update check failed: {result.error}", DebugLevel.COMMS)
+                continue
+            if result.version is None or result.version == self._update_notified:
+                continue
+            domoticz_api.log_status(
+                f"Update available: version {result.version} (running {self._plugin_version}). "
+                f"Release notes and download: {result.url}"
+            )
+            domoticz_api.send_notification(
+                f"Luxtronik plugin {result.version} is available",
+                f"Version {result.version} of the Luxtronik heat pump plugin is available; "
+                f"you run {self._plugin_version}. {result.url}",
+            )
+            self._update_notified = result.version
+            self._persist()
 
 
 # =============================================================================

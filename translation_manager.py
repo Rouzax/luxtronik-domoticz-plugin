@@ -31,11 +31,11 @@ class TranslationManager:
     }
 
     LANGUAGE_MAP = {
-        "0": Language.ENGLISH,
-        "1": Language.POLISH,
-        "2": Language.DUTCH,
-        "3": Language.GERMAN,
-        "4": Language.FRENCH,
+        "en": Language.ENGLISH,
+        "pl": Language.POLISH,
+        "nl": Language.DUTCH,
+        "de": Language.GERMAN,
+        "fr": Language.FRENCH,
     }
 
     def __init__(self):
