@@ -6,6 +6,7 @@ Author: Rouzax, 2025 (Refactored)
     <description>
         <h2>Luxtronik Heat Pump Controller Plugin</h2><br/>
         <p>This plugin connects to Luxtronik-based heat pump controllers using socket communication.</p>
+        <p>Documentation, settings and troubleshooting: <a href="https://rouzax.github.io/luxtronik-domoticz-plugin/" target="_blank">rouzax.github.io/luxtronik-domoticz-plugin</a></p>
 
         <h3>Features:</h3>
         <ul>
