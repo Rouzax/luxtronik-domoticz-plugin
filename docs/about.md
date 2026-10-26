@@ -23,6 +23,10 @@ Each release on GitHub lists what changed: see [Releases](https://github.com/Rou
 - Found a mistake in these pages? Every page has an edit button at the top that opens it on GitHub.
 - Security problems: see [Reporting a security problem](security.md#reporting-a-security-problem).
 
+## Licence
+
+The plugin is released under the [MIT licence](https://github.com/Rouzax/luxtronik-domoticz-plugin/blob/main/LICENSE). The fault-code and heat-pump-type tables include texts from two other MIT-licensed projects; their notices are in `fault_codes.py`.
+
 ## Support the project
 
 Building tools that solve my own problems and sharing them in the hope they solve yours too. This one saves you the evening of decoding raw Luxtronik registers by hand before your heat pump shows up in Domoticz.
