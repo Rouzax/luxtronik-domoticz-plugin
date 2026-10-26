@@ -22,3 +22,7 @@ docs/superpowers/
 # Worktrees
 .worktrees/
 .superpowers/
+
+# Docs site: build output and the local docs toolchain
+site/
+.venv-docs/

@@ -11,3 +11,5 @@ pyproject.toml       export-ignore
 .pre-commit-config.yaml export-ignore
 .gitignore           export-ignore
 .gitattributes       export-ignore
+mkdocs.yml           export-ignore
+requirements-docs.txt export-ignore

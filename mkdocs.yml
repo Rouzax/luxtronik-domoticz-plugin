@@ -1,0 +1,136 @@
+# Built with Zensical, which reads this mkdocs.yml natively. Keeping the
+# config in mkdocs.yml rather than zensical.toml keeps the build tool
+# swappable. Build: `zensical build --clean --strict` (output in ./site,
+# which is gitignored); .github/workflows/docs.yml publishes it to Pages.
+site_name: Luxtronik Heat Pump Plugin for Domoticz
+site_description: >-
+  A Domoticz plugin for Luxtronik 2.0/2.1 heat pump controllers: steady-state
+  COP tracking, pump power compensation, refrigerant diagnostics and safe,
+  allowlisted controls.
+site_author: Rouzax
+site_url: https://rouzax.github.io/luxtronik-domoticz-plugin/
+repo_url: https://github.com/Rouzax/luxtronik-domoticz-plugin
+repo_name: Rouzax/luxtronik-domoticz-plugin
+edit_uri: edit/main/docs/
+copyright: Copyright &copy; 2026 Rouzax - not affiliated with Alpha Innotec or any heat pump manufacturer
+
+theme:
+  name: material
+  language: en
+  icon:
+    logo: material/heat-pump
+    repo: fontawesome/brands/github
+  favicon: assets/favicon.svg
+  palette:
+    - media: "(prefers-color-scheme)"
+      primary: custom
+      accent: custom
+      toggle:
+        icon: lucide/sun-moon
+        name: Switch to light mode
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: custom
+      accent: custom
+      toggle:
+        icon: lucide/sun
+        name: Switch to dark mode
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: custom
+      accent: custom
+      toggle:
+        icon: lucide/moon
+        name: Switch to system preference
+  # The nav is flat, so navigation.path and navigation.indexes would render
+  # nothing and are left out.
+  features:
+    - content.action.edit
+    - content.code.annotate
+    - content.code.copy
+    - content.code.select
+    - content.footnote.tooltips
+    - content.tabs.link
+    - content.tooltips
+    - navigation.footer
+    - navigation.instant
+    - navigation.instant.prefetch
+    - navigation.sections
+    - navigation.top
+    - navigation.tracking
+    - search.highlight
+    - toc.follow
+
+# Local-only working documents must never be published, even when present
+# on disk. includes/ holds snippets appended to every page, not pages.
+exclude_docs: |
+  superpowers/
+  plans/
+not_in_nav: |
+  includes/
+
+extra_css:
+  - stylesheets/extra.css
+
+extra:
+  social:
+    - icon: fontawesome/brands/github
+      link: https://github.com/Rouzax/luxtronik-domoticz-plugin
+      name: Luxtronik plugin on GitHub
+    - icon: simple/kofi
+      link: https://ko-fi.com/O0W221GBUG
+      name: Support the Luxtronik plugin on Ko-fi
+
+# The full recommended set from `zensical new`. Declaring markdown_extensions
+# replaces Zensical's defaults instead of merging with them, so trimming this
+# list silently disables features.
+markdown_extensions:
+  - abbr
+  - admonition
+  - attr_list
+  - def_list
+  - footnotes
+  - md_in_html
+  - toc:
+      permalink: true
+  - pymdownx.arithmatex:
+      generic: true
+  - pymdownx.betterem
+  - pymdownx.caret
+  - pymdownx.details
+  - pymdownx.emoji:
+      emoji_index: !!python/name:zensical.extensions.emoji.twemoji
+      emoji_generator: !!python/name:zensical.extensions.emoji.to_svg
+  - pymdownx.highlight:
+      anchor_linenums: true
+      line_spans: __span
+      pygments_lang_class: true
+  - pymdownx.inlinehilite
+  - pymdownx.keys
+  - pymdownx.magiclink
+  - pymdownx.mark
+  - pymdownx.smartsymbols
+  - pymdownx.snippets:
+      auto_append:
+        - docs/includes/abbreviations.md
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
+  - pymdownx.tabbed:
+      alternate_style: true
+      combine_header_slug: true
+  - pymdownx.tasklist:
+      custom_checkbox: true
+  - pymdownx.tilde
+
+nav:
+  - Home: index.md
+  - Installation: install.md
+  - Settings: settings.md
+  - Devices: devices.md
+  - Migrating from v1: migration.md
+  - Troubleshooting / FAQ: faq.md
+  - Security: security.md
+  - About: about.md
