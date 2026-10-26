@@ -9,7 +9,8 @@ updates:
     cooldown:
       default-days: 7
 
-  # Dev tooling only (requirements-dev.txt); the runtime is stdlib-only.
+  # Dev and docs tooling only (requirements-dev.txt, requirements-docs.txt); the
+  # runtime is stdlib-only.
   - package-ecosystem: pip
     directory: /
     schedule:

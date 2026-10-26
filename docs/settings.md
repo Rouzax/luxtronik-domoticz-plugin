@@ -115,7 +115,7 @@ For normal use, leave this at **None**: you then only see errors, warnings and a
 | Option | Adds to the log |
 |--------|-----------------|
 | None | Nothing extra |
-| Basic | Start-up, connection status and a summary after each update ("Updated 7, unchanged 46, gated 2") |
+| Basic | Start and stop, the settings in use (update interval, Max COP filter, pump power compensation, write protection) and a summary after each update ("Updated 7, unchanged 46, gated 2"). Connection failures are always logged, at every level |
 | Basic + Device | Basic, plus every device update and what changed |
 | Basic + Comms | Basic, plus connection handling and protocol messages |
 | Basic + Device + Comms | All of the above |
