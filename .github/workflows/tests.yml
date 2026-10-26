@@ -1,0 +1,46 @@
+name: Tests
+
+# Runs the same checks as the pre-commit hooks (ruff, ruff format, pyright,
+# pytest with the coverage floor from pyproject.toml), on the Python floor and
+# on the version current Domoticz images ship.
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  checks:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.11", "3.13"]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Set up Python
+        uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6.3.0
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install dev tooling
+        run: python -m pip install --disable-pip-version-check --only-binary ":all:" -r requirements-dev.txt
+
+      - name: Ruff
+        run: ruff check .
+
+      - name: Ruff format
+        run: ruff format --check .
+
+      - name: Pyright
+        run: pyright
+
+      - name: Pytest
+        run: pytest
