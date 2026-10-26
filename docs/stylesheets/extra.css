@@ -1,0 +1,31 @@
+/* Brand colour is the plugin's cyan (#06b6d4), the accent of its previous
+   landing page. The bright cyan has too little contrast against white for
+   link text, so the light scheme uses darker shades of the same hue; the
+   dark scheme uses the brand cyan itself. Keep both pairs at or above WCAG
+   AA (4.5:1) for link text when changing them. */
+[data-md-color-scheme="default"] {
+  --md-primary-fg-color: #0e7490;
+  --md-primary-fg-color--light: #06b6d4;
+  --md-primary-fg-color--dark: #155e75;
+  --md-primary-bg-color: #ffffff;
+  --md-accent-fg-color: #0e7490;
+  --md-accent-fg-color--transparent: rgba(14, 116, 144, 0.1);
+}
+
+/* White text on the bright cyan fails contrast, so primary buttons get the
+   dark page colour as their text instead. */
+[data-md-color-scheme="slate"] {
+  --md-primary-fg-color: #06b6d4;
+  --md-primary-fg-color--light: #67e8f9;
+  --md-primary-fg-color--dark: #0891b2;
+  --md-primary-bg-color: #0a0e17;
+  --md-accent-fg-color: #22d3ee;
+  --md-accent-fg-color--transparent: rgba(34, 211, 238, 0.1);
+}
+
+/* Screenshots of Domoticz cards are wide; keep them inside the content
+   column on phones. */
+.md-typeset img {
+  max-width: 100%;
+  height: auto;
+}
