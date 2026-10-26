@@ -645,6 +645,7 @@ def build_device_specs() -> List[DeviceSpec]:
             [LuxtronikAddress.CONDENSING_TEMP_CALC, LuxtronikAddress.EVAPORATING_TEMP],
             divider=10,
             gated=True,
+            passive_cooling_bypass=False,
         ),
         # Unit 172: Condensing-supply ΔT (condensing temp - heat supply water temp).
         # Signed: positive = water below condensing (condenser headroom, normal in
@@ -660,6 +661,7 @@ def build_device_specs() -> List[DeviceSpec]:
             [LuxtronikAddress.CONDENSING_TEMP_CALC, LuxtronikAddress.HEAT_SUPPLY_TEMP],
             divider=10,
             gated=True,
+            passive_cooling_bypass=False,
         ),
         # Unit 173: Discharge headroom (T-HG max setpoint - actual hot gas temp)
         # Margin remaining before the hot-gas trip limit is reached (~115 C).
