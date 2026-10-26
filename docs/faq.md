@@ -42,7 +42,7 @@ Domoticz repeats the last received value every 5 minutes by default, also while 
 
 ## COP never updates
 
-- **The compressor has not run steadily for 2 minutes yet.** COP only updates after that.
+- **The compressor has only just started.** COP only updates after a short settling period of up to 2 minutes at steady speed.
 - **COP heating and COP DHW only update in their own mode.** COP DHW stays unchanged during heating and the other way round.
 - **No COP during passive cooling.**
 - **The Max COP value filters the readings.** If real readings are above the [Max COP value](settings.md#max-cop-value), they are discarded; raise it, or set it to 0 to turn the filter off. With debug level **All**, the log names the reason for every skipped reading.
@@ -61,12 +61,12 @@ If you still have the notification or log line from before that save ("Settings 
 
 ## Write commands do nothing
 
-Changing a mode or setpoint has no effect, and the log shows a line starting with `WRITE BLOCKED`:
+Changing a mode or setpoint has no effect on the heat pump.
 
-- **Only the control devices (units 10-16) can write to the heat pump.** Commands sent to any other device are refused on purpose. See [Security](security.md#what-the-plugin-can-change-on-the-heat-pump).
-- **The value is outside the device's range**, for example a DHW target above 65 °C sent by a script. Use a value the device offers.
+- **The command went to a device that cannot write.** Only the control devices (units 10-16) write to the heat pump; commands to any other device are ignored on purpose. With a debug level that includes Comms, the log shows `No write handler for unit N`. See [Security](security.md#what-the-plugin-can-change-on-the-heat-pump).
+- **A setpoint value is outside the device's range**, for example a DHW target above 65 °C sent by a script. The log shows a line starting with `WRITE BLOCKED`. Use a value the device offers.
 
-If there is no `WRITE BLOCKED` line, set the debug level to **Basic + Comms** and try again; the log then shows whether the command reached the heat pump.
+Otherwise, set the debug level to **Basic + Comms** and try again; the log then shows whether the command reached the heat pump.
 
 ## What to include in a bug report
 

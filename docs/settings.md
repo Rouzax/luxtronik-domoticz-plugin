@@ -70,7 +70,7 @@ Set it to `0` or leave it empty to turn the filter off. A value that is not a nu
 
 The plugin reports COP only while the compressor runs steadily:
 
-- The compressor must run at or above the controller's minimum target frequency for at least **2 minutes** in a row. Start-up, ramp-up and idle periods are skipped.
+- The compressor must run at or above the controller's minimum target frequency, after a short settling period of up to 2 minutes. Start-up, ramp-up and idle periods are skipped.
 - No COP is reported during passive cooling, where the compressor does not run.
 - Readings below 10 W power or 100 W heat output are treated as noise.
 - **COP heating** only updates in heating mode, **COP DHW** only in hot water mode.
