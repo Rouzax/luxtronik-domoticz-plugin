@@ -1,6 +1,6 @@
 # Luxtronik Heat Pump Controller Plugin for Domoticz
 
-Monitor and control a Luxtronik heat pump from Domoticz, with efficiency numbers you can trust. The plugin reads Luxtronik 2.0/2.1 based controllers (used by Alpha Innotec, Siemens Novelan, Roth, Elco, Buderus, Nibe, Wolf Heiztechnik and others) over your local network, creates 68 devices for temperatures, power, heat output, COP, compressor and refrigerant data, and lets you change the heat pump's modes and setpoints from Domoticz.
+Monitor and control a Luxtronik heat pump from Domoticz, with efficiency numbers you can trust. The plugin reads Luxtronik 2.0/2.1 based controllers (used by Alpha Innotec, Siemens Novelan, Roth, Elco, Buderus, Nibe, Wolf Heiztechnik and others) over your local network, creates 71 devices for temperatures, power, heat output, COP, compressor and refrigerant data, and lets you change the heat pump's modes and setpoints from Domoticz.
 
 **Documentation: <https://rouzax.github.io/luxtronik-domoticz-plugin/>**
 
@@ -55,7 +55,7 @@ Every setting is described on the [Settings](https://rouzax.github.io/luxtronik-
 
 - [Installation](https://rouzax.github.io/luxtronik-domoticz-plugin/install/)
 - [Settings](https://rouzax.github.io/luxtronik-domoticz-plugin/settings/)
-- [Devices](https://rouzax.github.io/luxtronik-domoticz-plugin/devices/): all 68 devices with unit numbers
+- [Devices](https://rouzax.github.io/luxtronik-domoticz-plugin/devices/): all 71 devices with unit numbers
 - [Migrating from v1](https://rouzax.github.io/luxtronik-domoticz-plugin/migration/): bring your history over from the original plugin
 - [Troubleshooting / FAQ](https://rouzax.github.io/luxtronik-domoticz-plugin/faq/)
 - [Security](https://rouzax.github.io/luxtronik-domoticz-plugin/security/)

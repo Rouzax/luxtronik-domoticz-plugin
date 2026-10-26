@@ -1,6 +1,6 @@
 # Devices
 
-The plugin creates **68 devices** in 14 groups. Each device has a fixed unit number that never changes, so scripts and dashboards that refer to a unit keep working across updates.
+The plugin creates **71 devices** in 14 groups. Each device has a fixed unit number that never changes, so scripts and dashboards that refer to a unit keep working across updates.
 
 Device names below are the English names. With another language, the names follow that language; a name you changed yourself is always kept.
 
@@ -21,7 +21,7 @@ Device names below are the English names. With another language, the names follo
 | [Compressor](#compressor) | 140-145 | Frequency, capacity, headroom | 6 |
 | [Refrigerant circuit](#refrigerant-circuit) | 160-174 | Refrigerant temperatures, pressures, diagnostics | 12 |
 | [Statistics](#statistics) | 180-185 | Runtime hours, starts, last cycle | 6 |
-| [Diagnostics](#diagnostics) | 200-202 | Errors, cooling release | 3 |
+| [Diagnostics](#diagnostics) | 200-205 | Faults, cooling release, controller info | 6 |
 
 Two labels are used in the tables:
 
@@ -198,6 +198,11 @@ Hours divided by starts gives the average run length. Many short runs (frequent 
 | 200 | Error count | Number of errors stored in the controller (unused) |
 | 201 | Cooling permitted | Whether the controller currently allows cooling (unused) |
 | 202 | Cooling release | Time left until cooling is allowed, minutes (unused) |
+| 203 | Last fault | Newest fault stored in the controller, with its time, for example `790: Severe inverter fault (2022-07-15 13:18)`. See [Fault codes](fault-codes.md) |
+| 204 | Firmware | Controller firmware version, for example `V3.92.3` (unused) |
+| 205 | Heat pump type | Type designation the controller reports, for example `MSW2-9S` (unused) |
+
+**Last fault** shows the newest fault the controller has stored, also after it was cleared, and "No faults" when there is none. When the controller stores a new fault, the plugin also writes it to the log as an error and sends one notification through your Domoticz notification systems. A fault that was already there when the plugin first read the controller is not announced.
 
 ## Gated devices
 
@@ -221,6 +226,6 @@ The plugin never switches a device back to unused, and an enabled device keeps i
 
 Each group has room for new devices, so a future version can add a device without moving existing ones:
 
-2-9, 17-29, 33-39, 43-49, 53-59, 68-79, 81-89, 94-99, 107-119, 122-129, 132-139, 146-159, 175-179, 186-199, 203-209.
+2-9, 17-29, 33-39, 43-49, 53-59, 68-79, 81-89, 94-99, 107-119, 122-129, 132-139, 146-159, 175-179, 186-199, 206-209.
 
 Units 168-170 belonged to devices retired in version 2.1.0 and are not reused.

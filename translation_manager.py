@@ -44,6 +44,10 @@ class TranslationManager:
         self._working_mode_statuses: Dict[str, Dict[Language, str]] = {}
         self._current_language = Language.ENGLISH
 
+    @property
+    def language(self) -> Language:
+        return self._current_language
+
     def set_language(self, language_code: str) -> None:
         """Set current language from plugin parameter."""
         if language_code not in self.LANGUAGE_MAP:

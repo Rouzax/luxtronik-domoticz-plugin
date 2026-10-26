@@ -5,7 +5,7 @@ hide:
 
 # Luxtronik Heat Pump Plugin for Domoticz
 
-Monitor and control a Luxtronik heat pump from Domoticz, with efficiency numbers you can trust. The plugin reads the controller over your local network, creates 68 devices for temperatures, power, heat output, COP, compressor and refrigerant data, and lets you change the heat pump's modes and setpoints from Domoticz.
+Monitor and control a Luxtronik heat pump from Domoticz, with efficiency numbers you can trust. The plugin reads the controller over your local network, creates 71 devices for temperatures, power, heat output, COP, compressor and refrigerant data, and lets you change the heat pump's modes and setpoints from Domoticz.
 
 [Install the plugin](install.md){ .md-button .md-button--primary }
 [See all devices](devices.md){ .md-button }

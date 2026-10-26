@@ -130,6 +130,7 @@ nav:
   - Installation: install.md
   - Settings: settings.md
   - Devices: devices.md
+  - Fault codes: fault-codes.md
   - Migrating from v1: migration.md
   - Troubleshooting / FAQ: faq.md
   - Security: security.md

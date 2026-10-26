@@ -108,6 +108,7 @@ Author: Rouzax, 2025 (Refactored)
 </plugin>
 """
 
+import datetime
 import queue
 from typing import Any, Dict, Optional, Tuple
 
@@ -123,6 +124,7 @@ from device_factory import DeviceFactory
 from device_spec import DeviceSpec, Field
 from device_specs_table import build_device_specs
 from device_update_tracker import DeviceUpdateTracker
+from fault_codes import fault_message
 from plugin_config import carry_over_notice, read_plugin_config
 from translation_manager import TranslationManager
 from translations import DEVICE_TRANSLATIONS, SELECTOR_OPTIONS, WORKING_MODE_STATUSES
@@ -182,6 +184,8 @@ class LuxtronikPlugin:
         # blob is what keeps an install in the migration bootstrap (see _load_state).
         self._names_persisted: bool = False
         self._update_notified: Optional[str] = None
+        # '<code>@<epoch>' of the newest controller fault already seen; None until first read.
+        self._fault_seen: Optional[str] = None
         self._settings_notice_sent: bool = False
         self._plugin_version: str = ""
         self._updates: "queue.Queue[update_check.UpdateResult]" = queue.Queue()
@@ -533,6 +537,8 @@ class LuxtronikPlugin:
             if command in data_store:
                 self.update_devices(command, data_store)
 
+        self._check_new_fault(data_store)
+
         _logger.log("Full update complete", DebugLevel.VERBOSE)
 
     def _validate_heartbeat(self, requested: int) -> int:
@@ -862,6 +868,7 @@ class LuxtronikPlugin:
         self._migrating = not self._names_persisted
         self._auto_names = blob.get("auto_names", {})
         self._update_notified = blob.get("update_notified")
+        self._fault_seen = blob.get("fault_seen")
         self._settings_notice_sent = bool(blob.get("settings_notice_sent"))
 
     def _persist(self) -> None:
@@ -872,6 +879,8 @@ class LuxtronikPlugin:
             state["auto_names"] = self._auto_names
         if self._update_notified:
             state["update_notified"] = self._update_notified
+        if self._fault_seen:
+            state["fault_seen"] = self._fault_seen
         if self._settings_notice_sent:
             state["settings_notice_sent"] = True
         domoticz_api.save_state(state)
@@ -902,6 +911,34 @@ class LuxtronikPlugin:
             user_agent=f"luxtronikex/{self._plugin_version} update-check",
         )
         self._checker.start()
+
+    def _check_new_fault(self, data_store: DataStore) -> None:
+        """Announce a fault the controller stored since the last check: one error line and one
+        notification. The fault present the first time the plugin reads the controller is
+        only recorded, so installing or upgrading does not announce an old fault."""
+        calc = data_store.get("READ_CALCUL", [])
+        try:
+            code = int(calc[LuxtronikAddress.ERROR_CODE_LATEST])
+            stamp = int(calc[LuxtronikAddress.ERROR_TIME_LATEST])
+        except (IndexError, TypeError, ValueError):
+            return
+        if code <= 0:
+            return
+        seen = f"{code}@{stamp}"
+        if seen == self._fault_seen:
+            return
+        first_read = self._fault_seen is None
+        self._fault_seen = seen
+        self._persist()
+        if first_read:
+            return
+        message = fault_message(code, _translator.language) or "Unknown fault"
+        when = datetime.datetime.fromtimestamp(stamp).strftime("%Y-%m-%d %H:%M") if stamp else ""
+        _logger.error(f"Heat pump fault {code}: {message} ({when})")
+        domoticz_api.send_notification(
+            f"Heat pump fault {code}: {message}",
+            f"The heat pump controller reported fault {code} ({message}) at {when}.",
+        )
 
     def _announce_updates(self) -> None:
         """Announce each newer version once: a log line and one notification through every
