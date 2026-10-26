@@ -77,13 +77,23 @@ The plugin talks to **Luxtronik 2.0/2.1 based controllers**. Many manufacturers 
 
 ## Screenshots
 
-Power, heat output, COP, circuit and compressor devices:
+Device cards from a real installation, in Domoticz with the Machinon theme.
 
-![Domoticz utility devices created by the plugin: power, heat output, COP, delta T, pumps, flow, compressor, superheat and pressures](assets/utility.png)
+=== "Power, heat and COP"
 
-Control devices for heating mode, hot water mode, hot water power mode and cooling:
+    ![Power, heat output and COP devices for total, heating and hot water, plus heating and source delta T, pump speeds and flow](assets/utility.png)
 
-![Domoticz control devices created by the plugin: heating mode, hot water mode, DHW power mode and cooling](assets/switches.png)
+=== "Temperatures"
+
+    ![Temperature devices: heat supply and return, return target, hot water, outside, room, and source inlet and outlet](assets/temperature.png)
+
+=== "Compressor and refrigerant"
+
+    ![Compressor and refrigerant devices: frequency, capacity, frequency headroom, refrigerant temperatures, superheat, pressures, refrigerant lift, condensing-supply delta T, discharge headroom and compression ratio](assets/refrigerant.png)
+
+=== "Controls"
+
+    ![Control devices: working mode, heating mode, hot water mode, DHW power mode, cooling, room temperature setpoint and hot water target](assets/controls.png)
 
 ## Where to go next
 
