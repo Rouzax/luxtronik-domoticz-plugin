@@ -62,11 +62,11 @@ theme:
     - toc.follow
 
 # Local-only working documents must never be published, even when present
-# on disk. includes/ holds snippets appended to every page, not pages.
+# on disk. includes/ holds snippets appended to every page, not pages; the
+# snippets extension reads them from disk, so excluding them is safe.
 exclude_docs: |
   superpowers/
   plans/
-not_in_nav: |
   includes/
 
 extra_css:

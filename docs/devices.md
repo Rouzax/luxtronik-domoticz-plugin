@@ -182,7 +182,7 @@ Temperatures and pressures inside the refrigerant circuit, plus derived values t
 |------|--------|---------------|
 | 180 | Compressor hours | Total compressor running hours |
 | 181 | Compressor starts | Total compressor starts |
-| 182 | Compressor last cycle | Length of the last finished compressor run, minutes. Updates when a run ends |
+| 182 | Compressor last cycle | Length of the last finished compressor run, minutes. Updates when a run ends; runs shorter than 1 minute are ignored |
 | 183 | Heating runtime | Total hours in heating mode (unused) |
 | 184 | DHW runtime | Total hours in hot water mode (unused) |
 | 185 | Cooling runtime | Total hours in cooling mode (unused) |
