@@ -118,7 +118,7 @@ import update_check
 from addresses import ConfigLimits, LuxtronikAddress, SocketCommand
 from connection import ConnectionManager
 from context import DebugLevel
-from converters import CycleTracker, DataStore
+from converters import COMPRESSOR_POWER_KEY, CycleTracker, DataStore
 from debug_logger import DebugLogger
 from device_factory import DeviceFactory
 from device_spec import DeviceSpec, Field
@@ -674,6 +674,7 @@ class LuxtronikPlugin:
             vbo_power = self._estimate_pump_power(vbo_speed, ranges["vbo_min"], ranges["vbo_max"])
 
             total_power = compressor_power + hup_power + vbo_power
+            data_store[COMPRESSOR_POWER_KEY] = [compressor_power]  # type: ignore[list-item]
             # Intentional float into the int calc list: compensated power carries
             # sub-watt precision that InstantPowerConverter reads back as a float.
             calc_data[LuxtronikAddress.POWER_TOTAL] = total_power  # type: ignore[assignment]
