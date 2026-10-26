@@ -16,7 +16,7 @@ The plugin reads everything, but writes only the settings behind its control dev
 | 15 | DHW temp target | Hot water setpoint, 30 to 65 °C in 0.5 °C steps |
 | 16 | Room temp setpoint | 15 to 30 °C in 0.5 °C steps |
 
-Every write is checked twice before anything is sent: the device must be one of the control devices above, and the controller address it writes to must be on the plugin's fixed list of allowed addresses. Anything else is refused and logged, for example:
+Every write is checked before anything is sent: the device must be one of the control devices above, the controller address it writes to must be on the plugin's fixed list of allowed addresses, and the value must be one that setting allows. Anything else is refused and logged with a line starting with `WRITE BLOCKED`, for example:
 
 ```
 WRITE BLOCKED: Address 1234 not in allowed list
