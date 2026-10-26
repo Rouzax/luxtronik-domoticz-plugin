@@ -16,13 +16,17 @@ The plugin reads everything, but writes only the settings behind its control dev
 | 15 | DHW temp target | Hot water setpoint, 30 to 65 °C in 0.5 °C steps |
 | 16 | Room temp setpoint | 15 to 30 °C in 0.5 °C steps |
 
-Every write is checked before anything is sent: the device must be one of the control devices above, the controller address it writes to must be on the plugin's fixed list of allowed addresses, and the value must be one that setting allows. Anything else is refused and logged with a line starting with `WRITE BLOCKED`, for example:
+Every write is checked before anything is sent: the device must be one of the control devices above, the controller address it writes to must be on the plugin's fixed list of allowed addresses, and the value must be one that setting allows. Commands to other devices are ignored, and a refused address or setpoint value is logged with a line starting with `WRITE BLOCKED`, for example:
 
 ```
 WRITE BLOCKED: Address 1234 not in allowed list
 ```
 
 The list is part of the plugin's code, not a setting, so nothing on the hardware page or in Domoticz can widen it. This protects the controller's configuration memory from accidental writes, for example by a script that sends a command to the wrong device.
+
+!!! warning "Selector levels from scripts"
+
+    A mode selector (units 10-12) that receives a level it does not have, for example from a script, logs an error and falls back to Automatic (Normal for DHW Power Mode), which it then writes to the heat pump. Choosing a level in the Domoticz interface cannot trigger this. Make sure scripts only send levels the selector shows.
 
 !!! note
 

@@ -32,7 +32,7 @@ Two labels are used in the tables:
 
 | Unit | Device | What it shows |
 |------|--------|---------------|
-| 1 | Working mode | What the heat pump is doing now: Heating, DHW, Swimming pool, EVU (power company lock), Defrost, No requirement, Heating ext., Cooling or Idle |
+| 1 | Working mode | What the heat pump is doing now: Heating, DHW, Swimming pool, Cooling, No requirement or Idle |
 
 ## Controls
 
@@ -158,8 +158,8 @@ Temperatures and pressures inside the refrigerant circuit, plus derived values t
 | 165 | Superheat | How far the gas is above its boiling point at the compressor inlet, K. **Gated** |
 | 166 | Pressure high | High-side pressure, bar. **Gated** |
 | 167 | Pressure low | Low-side pressure, bar. **Gated** |
-| 171 | Refrigerant lift | Condensing minus evaporating temperature, K. **Gated** |
-| 172 | Condensing-supply ΔT | Condensing temperature minus supply water temperature, K. **Gated** |
+| 171 | Refrigerant lift | Condensing minus evaporating temperature, K. **Gated**, but also updates during passive cooling |
+| 172 | Condensing-supply ΔT | Condensing temperature minus supply water temperature, K. **Gated**, but also updates during passive cooling |
 | 173 | Discharge headroom | Margin between hot gas temperature and the controller's hot gas limit, K. **Gated** |
 | 174 | Compression ratio | High-side divided by low-side pressure (absolute). **Gated** |
 
@@ -199,9 +199,10 @@ Hours divided by starts gives the average run length. Many short runs (frequent 
 
 ## Gated devices
 
-Gated devices only send a value while the compressor runs at or above the controller's minimum target speed, and only after it has done so for **2 minutes** in a row. During idle, start-up and ramp-up they keep their last value instead of logging misleading readings.
+Gated devices only send a value while the compressor runs at or above the controller's minimum target speed, after a short settling period of up to 2 minutes. During idle, start-up and ramp-up they keep their last value instead of logging misleading readings.
 
 - Heating ΔT (63) and Source ΔT (102) also update during passive cooling, when the pumps run without the compressor and the temperature difference is still meaningful.
+- Refrigerant lift (171) and Condensing-supply ΔT (172) also update during passive cooling, although the compressor is off then. Read their values during passive cooling with care.
 - Freq headroom (145) is not settled: it updates as soon as the compressor runs.
 - The COP devices have further conditions; see [COP accuracy](settings.md#cop-accuracy).
 
