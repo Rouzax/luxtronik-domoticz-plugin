@@ -59,7 +59,11 @@ class LuxtronikAddress:
     DHW_RUNTIME = 65  # ID_WEB_Zaehler_BetrZeitBW - DHW mode seconds
     COOLING_RUNTIME = 66  # ID_WEB_Zaehler_BetrZeitKue - cooling mode seconds
     CURRENT_CYCLE_TIME = 67  # Time_WPein_akt - current cycle duration in seconds
+    HEATPUMP_TYPE_CODE = 78  # ID_WEB_Code_WP_akt - heat pump type code
     WORKING_MODE = 80
+    SOFTWARE_VERSION = 81  # ID_WEB_SoftStand - one character per address, 81..90
+    ERROR_TIME_LATEST = 95  # ID_WEB_ERROR_Time0 - UTC epoch of the newest stored fault
+    ERROR_CODE_LATEST = 100  # ID_WEB_ERROR_Nr0 - newest stored fault code, 0 when none
     ERROR_COUNT = 105  # ID_WEB_AnzahlFehlerInSpeicher - stored error count
     COOLING_PERMITTED = 146  # ID_WEB_FreigabKuehl - cooling release/permitted flag
     HEATING_FLOW = 155  # ID_WEB_WMZ_Durchfluss - heating circuit flow (L/h)

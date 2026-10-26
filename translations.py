@@ -1236,6 +1236,54 @@ DEVICE_TRANSLATIONS: Dict[str, Dict[str, Dict[Language, str]]] = {
             Language.FRENCH: "Indique si le refroidissement passif est autorisé.\nBasé sur la température extérieure et les paramètres.\nIndicateur d'état en lecture seule.",
         },
     },
+    "last_fault": {
+        "name": {
+            Language.ENGLISH: "Last fault",
+            Language.POLISH: "Ostatni błąd",
+            Language.DUTCH: "Laatste storing",
+            Language.GERMAN: "Letzte Störung",
+            Language.FRENCH: "Dernier défaut",
+        },
+        "description": {
+            Language.ENGLISH: "Newest fault stored in the controller, with its time.\nStays visible after the fault is cleared.\nA new fault is also sent as a notification.",
+            Language.POLISH: "Najnowszy błąd zapisany w sterowniku, z czasem.\nPozostaje widoczny po usunięciu błędu.\nNowy błąd jest też wysyłany jako powiadomienie.",
+            Language.DUTCH: "Nieuwste storing in de regelaar, met tijdstip.\nBlijft zichtbaar nadat de storing is opgelost.\nEen nieuwe storing wordt ook als melding verstuurd.",
+            Language.GERMAN: "Neueste im Regler gespeicherte Störung, mit Zeitpunkt.\nBleibt sichtbar, nachdem die Störung behoben ist.\nEine neue Störung wird auch als Benachrichtigung gesendet.",
+            Language.FRENCH: "Défaut le plus récent enregistré dans le régulateur, avec l'heure.\nReste visible après la résolution du défaut.\nUn nouveau défaut est aussi envoyé en notification.",
+        },
+    },
+    "firmware_version": {
+        "name": {
+            Language.ENGLISH: "Firmware",
+            Language.POLISH: "Oprogramowanie",
+            Language.DUTCH: "Firmware",
+            Language.GERMAN: "Firmware",
+            Language.FRENCH: "Micrologiciel",
+        },
+        "description": {
+            Language.ENGLISH: "Firmware version of the Luxtronik controller.",
+            Language.POLISH: "Wersja oprogramowania sterownika Luxtronik.",
+            Language.DUTCH: "Firmwareversie van de Luxtronik-regelaar.",
+            Language.GERMAN: "Firmwareversion des Luxtronik-Reglers.",
+            Language.FRENCH: "Version du micrologiciel du régulateur Luxtronik.",
+        },
+    },
+    "heatpump_type": {
+        "name": {
+            Language.ENGLISH: "Heat pump type",
+            Language.POLISH: "Typ pompy ciepła",
+            Language.DUTCH: "Type warmtepomp",
+            Language.GERMAN: "Wärmepumpentyp",
+            Language.FRENCH: "Type de PAC",
+        },
+        "description": {
+            Language.ENGLISH: "Heat pump type as reported by the controller.",
+            Language.POLISH: "Typ pompy ciepła podany przez sterownik.",
+            Language.DUTCH: "Type warmtepomp zoals de regelaar het meldt.",
+            Language.GERMAN: "Wärmepumpentyp laut Regler.",
+            Language.FRENCH: "Type de pompe à chaleur indiqué par le régulateur.",
+        },
+    },
 }
 
 # =============================================================================
@@ -1366,5 +1414,20 @@ WORKING_MODE_STATUSES: Dict[str, Dict[Language, str]] = {
         Language.DUTCH: "Inactief",
         Language.GERMAN: "Inaktiv",
         Language.FRENCH: "Repos",
+    },
+    # Last fault device
+    "No faults": {
+        Language.ENGLISH: "No faults",
+        Language.POLISH: "Brak błędów",
+        Language.DUTCH: "Geen storingen",
+        Language.GERMAN: "Keine Störungen",
+        Language.FRENCH: "Aucun défaut",
+    },
+    "Unknown fault": {
+        Language.ENGLISH: "Unknown fault",
+        Language.POLISH: "Nieznany błąd",
+        Language.DUTCH: "Onbekende storing",
+        Language.GERMAN: "Unbekannte Störung",
+        Language.FRENCH: "Défaut inconnu",
     },
 }

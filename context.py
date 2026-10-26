@@ -5,6 +5,7 @@ with the live objects; the defaults keep converters importable offline (tests in
 from enum import IntFlag
 
 from addresses import ConfigLimits
+from translations import Language
 
 
 # =============================================================================
@@ -50,6 +51,8 @@ class _NullLogger:
 
 class _PassthroughTranslator:
     """Drop-in translator used before onStart wires in the real TranslationManager."""
+
+    language = Language.ENGLISH
 
     def get_working_mode_status(self, key: str) -> str:
         return key

@@ -645,6 +645,7 @@ def build_device_specs() -> List[DeviceSpec]:
             [LuxtronikAddress.CONDENSING_TEMP_CALC, LuxtronikAddress.EVAPORATING_TEMP],
             divider=10,
             gated=True,
+            passive_cooling_bypass=False,
         ),
         # Unit 172: Condensing-supply ΔT (condensing temp - heat supply water temp).
         # Signed: positive = water below condensing (condenser headroom, normal in
@@ -660,6 +661,7 @@ def build_device_specs() -> List[DeviceSpec]:
             [LuxtronikAddress.CONDENSING_TEMP_CALC, LuxtronikAddress.HEAT_SUPPLY_TEMP],
             divider=10,
             gated=True,
+            passive_cooling_bypass=False,
         ),
         # Unit 173: Discharge headroom (T-HG max setpoint - actual hot gas temp)
         # Margin remaining before the hot-gas trip limit is reached (~115 C).
@@ -778,5 +780,21 @@ def build_device_specs() -> List[DeviceSpec]:
             used=0,
             image=21,
         ),
-        # Units 203-209: Reserved for future diagnostics
+        # Unit 203: Newest stored fault, decoded to text in the plugin language
+        DeviceFactory.create_last_fault_device(
+            203,
+            "last_fault",
+            LuxtronikAddress.ERROR_CODE_LATEST,
+            LuxtronikAddress.ERROR_TIME_LATEST,
+            used=1,
+        ),
+        # Unit 204: Controller firmware version
+        DeviceFactory.create_firmware_device(
+            204, "firmware_version", LuxtronikAddress.SOFTWARE_VERSION
+        ),
+        # Unit 205: Heat pump type designation from the type code
+        DeviceFactory.create_heatpump_type_device(
+            205, "heatpump_type", LuxtronikAddress.HEATPUMP_TYPE_CODE
+        ),
+        # Units 206-209: Reserved for future diagnostics
     ]

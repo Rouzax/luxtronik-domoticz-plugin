@@ -2,10 +2,11 @@
 Luxtronik Heat Pump Controller Plugin v2 - Refactored for DomoticzEx Framework
 Author: Rouzax, 2025 (Refactored)
 
-<plugin key="luxtronikex" name="Luxtronik Heat Pump Controller v2" author="Rouzax" version="3.0.0" externallink="https://github.com/Rouzax/luxtronik-domoticz-plugin-v2">
+<plugin key="luxtronikex" name="Luxtronik Heat Pump Controller v2" author="Rouzax" version="3.1.0" externallink="https://github.com/Rouzax/luxtronik-domoticz-plugin">
     <description>
         <h2>Luxtronik Heat Pump Controller Plugin</h2><br/>
         <p>This plugin connects to Luxtronik-based heat pump controllers using socket communication.</p>
+        <p>Documentation, settings and troubleshooting: <a href="https://rouzax.github.io/luxtronik-domoticz-plugin/" target="_blank">rouzax.github.io/luxtronik-domoticz-plugin</a></p>
 
         <h3>Features:</h3>
         <ul>
@@ -107,6 +108,7 @@ Author: Rouzax, 2025 (Refactored)
 </plugin>
 """
 
+import datetime
 import queue
 from typing import Any, Dict, Optional, Tuple
 
@@ -116,12 +118,13 @@ import update_check
 from addresses import ConfigLimits, LuxtronikAddress, SocketCommand
 from connection import ConnectionManager
 from context import DebugLevel
-from converters import CycleTracker, DataStore
+from converters import COMPRESSOR_POWER_KEY, CycleTracker, DataStore
 from debug_logger import DebugLogger
 from device_factory import DeviceFactory
 from device_spec import DeviceSpec, Field
 from device_specs_table import build_device_specs
 from device_update_tracker import DeviceUpdateTracker
+from fault_codes import fault_message
 from plugin_config import carry_over_notice, read_plugin_config
 from translation_manager import TranslationManager
 from translations import DEVICE_TRANSLATIONS, SELECTOR_OPTIONS, WORKING_MODE_STATUSES
@@ -136,7 +139,7 @@ _heartbeat_interval: int = ConfigLimits.HEARTBEAT_DEFAULT
 # Global translation manager
 _translator = TranslationManager()
 
-REPOSITORY = "Rouzax/luxtronik-domoticz-plugin-v2"
+REPOSITORY = "Rouzax/luxtronik-domoticz-plugin"
 
 
 # =============================================================================
@@ -181,6 +184,8 @@ class LuxtronikPlugin:
         # blob is what keeps an install in the migration bootstrap (see _load_state).
         self._names_persisted: bool = False
         self._update_notified: Optional[str] = None
+        # '<code>@<epoch>' of the newest controller fault already seen; None until first read.
+        self._fault_seen: Optional[str] = None
         self._settings_notice_sent: bool = False
         self._plugin_version: str = ""
         self._updates: "queue.Queue[update_check.UpdateResult]" = queue.Queue()
@@ -246,6 +251,7 @@ class LuxtronikPlugin:
 
         # Multi-instance support: unique DeviceID per hardware
         device_id = self._device_id
+        refused: list[int] = []
 
         for spec in specs:
             unit_id = spec.unit_id  # Use explicit unit_id, not position
@@ -268,8 +274,12 @@ class LuxtronikPlugin:
             k = name_ownership.key(device_id, unit_id)
 
             if not domoticz_api.unit_exists(_devices(), device_id, unit_id):
-                # Create new unit and claim everything we just wrote.
+                # Create new unit and claim everything we just wrote. Domoticz refuses new
+                # units while "Accept new devices" is off, logging only its own error.
                 domoticz_api.create_unit(device_id, unit_id, full_name, spec.device_params)
+                if not domoticz_api.unit_exists(_devices(), device_id, unit_id):
+                    refused.append(unit_id)
+                    continue
                 name_ownership.claim(self._auto_names, k, "name", full_name)
                 created_desc = spec.device_params.get("Description")
                 if created_desc:
@@ -384,7 +394,16 @@ class LuxtronikPlugin:
                         DebugLevel.DEVICE,
                     )
 
-        _logger.log(f"Device creation complete: {len(specs)} devices", DebugLevel.BASIC)
+        if refused:
+            _logger.warning(
+                f"Domoticz did not accept {len(refused)} new device(s) (units "
+                f"{', '.join(map(str, refused))}). Allow new devices (Setup > Settings, or "
+                "'Allow for 5 minutes' in Setup > Hardware), then restart this plugin."
+            )
+        _logger.log(
+            f"Device creation complete: {len(specs) - len(refused)} of {len(specs)} devices",
+            DebugLevel.BASIC,
+        )
 
     def update_device(self, unit_id: int, new_values: Dict[str, Any]) -> bool:
         """Update a single device with optimized tracking.
@@ -517,6 +536,8 @@ class LuxtronikPlugin:
         for command in command_codes:
             if command in data_store:
                 self.update_devices(command, data_store)
+
+        self._check_new_fault(data_store)
 
         _logger.log("Full update complete", DebugLevel.VERBOSE)
 
@@ -653,6 +674,7 @@ class LuxtronikPlugin:
             vbo_power = self._estimate_pump_power(vbo_speed, ranges["vbo_min"], ranges["vbo_max"])
 
             total_power = compressor_power + hup_power + vbo_power
+            data_store[COMPRESSOR_POWER_KEY] = [compressor_power]  # type: ignore[list-item]
             # Intentional float into the int calc list: compensated power carries
             # sub-watt precision that InstantPowerConverter reads back as a float.
             calc_data[LuxtronikAddress.POWER_TOTAL] = total_power  # type: ignore[assignment]
@@ -847,6 +869,7 @@ class LuxtronikPlugin:
         self._migrating = not self._names_persisted
         self._auto_names = blob.get("auto_names", {})
         self._update_notified = blob.get("update_notified")
+        self._fault_seen = blob.get("fault_seen")
         self._settings_notice_sent = bool(blob.get("settings_notice_sent"))
 
     def _persist(self) -> None:
@@ -857,6 +880,8 @@ class LuxtronikPlugin:
             state["auto_names"] = self._auto_names
         if self._update_notified:
             state["update_notified"] = self._update_notified
+        if self._fault_seen:
+            state["fault_seen"] = self._fault_seen
         if self._settings_notice_sent:
             state["settings_notice_sent"] = True
         domoticz_api.save_state(state)
@@ -887,6 +912,34 @@ class LuxtronikPlugin:
             user_agent=f"luxtronikex/{self._plugin_version} update-check",
         )
         self._checker.start()
+
+    def _check_new_fault(self, data_store: DataStore) -> None:
+        """Announce a fault the controller stored since the last check: one error line and one
+        notification. The fault present the first time the plugin reads the controller is
+        only recorded, so installing or upgrading does not announce an old fault."""
+        calc = data_store.get("READ_CALCUL", [])
+        try:
+            code = int(calc[LuxtronikAddress.ERROR_CODE_LATEST])
+            stamp = int(calc[LuxtronikAddress.ERROR_TIME_LATEST])
+        except (IndexError, TypeError, ValueError):
+            return
+        if code <= 0:
+            return
+        seen = f"{code}@{stamp}"
+        if seen == self._fault_seen:
+            return
+        first_read = self._fault_seen is None
+        self._fault_seen = seen
+        self._persist()
+        if first_read:
+            return
+        message = fault_message(code, _translator.language) or "Unknown fault"
+        when = datetime.datetime.fromtimestamp(stamp).strftime("%Y-%m-%d %H:%M") if stamp else ""
+        _logger.error(f"Heat pump fault {code}: {message} ({when})")
+        domoticz_api.send_notification(
+            f"Heat pump fault {code}: {message}",
+            f"The heat pump controller reported fault {code} ({message}) at {when}.",
+        )
 
     def _announce_updates(self) -> None:
         """Announce each newer version once: a log line and one notification through every
@@ -998,6 +1051,13 @@ def onCommand(DeviceID: str, Unit: int, Command: str, Level: int, Color: str) ->
                 Hue=Color,
                 available_writes=_plugin_ref.available_writes,
             )
+
+            if value is None:
+                _logger.error(
+                    f"WRITE BLOCKED: command '{Command}' (level {Level}) is not a valid option "
+                    f"(spec_id={spec.spec_id})"
+                )
+                return
 
             # Get address from spec
             address = spec.address

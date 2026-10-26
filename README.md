@@ -1,501 +1,68 @@
 # Luxtronik Heat Pump Controller Plugin for Domoticz
 
-## Overview
+Monitor and control a Luxtronik heat pump from Domoticz, with efficiency numbers you can trust. The plugin reads Luxtronik 2.0/2.1 based controllers (used by Alpha Innotec, Siemens Novelan, Roth, Elco, Buderus, Nibe, Wolf Heiztechnik and others) over your local network, creates 71 devices for temperatures, power, heat output, COP, compressor and refrigerant data, and lets you change the heat pump's modes and setpoints from Domoticz.
 
-The Luxtronik plugin for Domoticz provides socket communication with Luxtronik-based heat pump controllers. Built on the **DomoticzEx framework**, this version features multi-instance support, intelligent COP tracking with steady-state gating, robust security with write protection, and comprehensive multi-language support. Building on the work of [ajarzyn](https://github.com/ajarzyn/domoticz-luxtronic2), this refactored version brings enhanced reliability and maintainability.
+**Documentation: <https://rouzax.github.io/luxtronik-domoticz-plugin/>**
 
-Also published on the [Domoticz Forum](https://forum.domoticz.com/viewtopic.php?p=44176)
+Also published on the [Domoticz Forum](https://forum.domoticz.com/viewtopic.php?p=44176).
 
 ## Features
 
-- **DomoticzEx Framework:**  
-  Modern plugin architecture with improved device management, callback support, and multi-instance capability.
-
-- **Real-Time Monitoring:**  
-  Retrieve live data from heat pump sensors including temperature, pressure, power consumption, compressor metrics, and more.
-  
-- **Multi-Instance Support:**  
-  Run multiple plugin instances for homes with more than one heat pump. Each instance uses a unique DeviceID derived from HardwareID for complete isolation.
-
-- **Intelligent COP Tracking:**  
-  Separate COP (Coefficient of Performance) measurements for heating mode, DHW (domestic hot water) mode, and combined total. Values are only reported during active heating cycles with steady-state gating to prevent idle readings from skewing efficiency statistics.
-
-- **Smart Device Updates:**  
-  Update tracker that only sends changes immediately while graphing devices resend values every ~2 minutes when unchanged, ensuring accurate long-term trend analysis without excessive database writes.
-
-- **Secure Write Protection:**  
-  All write operations are validated against an explicit allowlist of safe addresses. Unknown or unauthorized write attempts are blocked to protect the heat pump's EEPROM.
-
-- **Stable Device IDs:**  
-  Devices use HardwareID-based identifiers that never change, even when renaming hardware or changing IP addresses. This prevents orphaned devices and ensures reliable automation rules.
-
-- **Intelligent Name Updates:**  
-  Device names and selector options update automatically when changing languages, but user customizations are preserved. Only names matching known translations are updated.
-
-- **Configurable Update Interval:**  
-  Read the heat pump every 10, 15, 20 or 30 seconds.
-
-- **Multi-Language Support:**  
-  Device names follow the Domoticz interface language by default, or a language you choose. Available languages include:
-  - English
-  - Polish
-  - Dutch
-  - German
-  - French
-
-- **Refrigerant Circuit Diagnostics:**  
-  Gated diagnostic devices for deep refrigerant-side insight: condensing temperature, refrigerant lift (condensing minus evaporating, the primary COP driver), condenser approach (fouling/flow indicator), discharge headroom (margin to hot-gas cutoff), and compression ratio (flags circuit degradation when trending up).
-
-- **Update Check:**  
-  Once a day the plugin asks GitHub whether a newer release exists and announces each new version once, in the Domoticz log and through every notification system you have set up in Domoticz. It can be limited to stable releases or turned off.
-
-- **Granular Debug Logging:**  
-  Multiple debug levels for efficient troubleshooting:
-  - **None:** Errors only
-  - **Basic:** Lifecycle events, summaries, write confirmations
-  - **Device:** Device updates and state changes
-  - **Comms:** Connection handling, protocol messages, commands
-  - **Verbose:** Tracker details, data conversion internals
-  - **All:** Everything enabled
+- **COP you can trust:** separate COP for heating, hot water and combined, reported only while the compressor runs steadily.
+- **Pump power compensation:** adds the estimated circulation and brine pump power to the compressor-only power reading, with presets for the Alpha Innotec WZSV models.
+- **Refrigerant diagnostics:** superheat, pressures, condensing temperature, refrigerant lift, discharge headroom and compression ratio.
+- **Safe controls:** modes and setpoints can be changed from Domoticz; every write is checked against a fixed allowlist.
+- **Stable devices:** device IDs are tied to the hardware entry, and names you change are never overwritten.
+- **Five languages:** English, Polish, Dutch, German and French.
+- **Multi-instance:** one hardware entry per heat pump.
+- **Update check:** a daily check announces new releases once; it sends nothing about you and can be turned off.
 
 ## Requirements
 
 - Domoticz 2026.1 or newer (the settings page uses named plugin settings, which older versions do not have)
-- A Luxtronik-based heat pump controller with network access
+- A Luxtronik-based heat pump controller with network access (TCP port 8889 by default)
 - Python 3.11 or newer
 
 ## Installation
 
-Pick the method that suits you. Domoticz only needs the plugin's Python modules at runtime, so the first three options keep your `plugins/` folder clean; the full-repo clone also pulls developer files (tests, docs, the site page). After any method, restart Domoticz and enable the plugin (final step below).
+Install into a folder named `luxtronikex` in the Domoticz `plugins` folder, using one of:
 
-### Option 1: Release zip (recommended, no git)
+- **Release zip (recommended):** download `luxtronikex-vX.Y.Z.zip` from the [latest release](https://github.com/Rouzax/luxtronik-domoticz-plugin/releases/latest) and extract it in the `plugins` folder.
+- **Git, with easy updates:**
+  ```sh
+  cd /path/to/domoticz/plugins
+  git clone -b dist https://github.com/Rouzax/luxtronik-domoticz-plugin.git luxtronikex
+  ```
+  Update later with `git -C /path/to/domoticz/plugins/luxtronikex pull`.
+- **Plugin manager:** the plugin is listed as `luxtronikex` in PyPluginStore and pp-manager.
 
-1. Download `luxtronikex-vX.Y.Z.zip` from the [Releases](https://github.com/Rouzax/luxtronik-domoticz-plugin-v2/releases) page.
-2. Extract it into your Domoticz plugins directory so the files land in `plugins/luxtronikex/`:
-   ```sh
-   cd /path/to/domoticz/plugins
-   unzip ~/Downloads/luxtronikex-vX.Y.Z.zip
-   ```
+Then restart Domoticz, go to **Setup → Hardware**, add **Luxtronik Heat Pump Controller v2**, and enter the IP address of your heat pump. Keep exactly one copy of the plugin in `plugins/`.
 
-The GitHub auto-generated "Source code" zip attached to each release is also runtime-only.
+Full instructions, including switching install method: [Installation](https://rouzax.github.io/luxtronik-domoticz-plugin/install/).
 
-### Option 2: Lean branch (git, with easy updates)
-
-Installs only the runtime files and lets you update later with `git pull`:
-```sh
-cd /path/to/domoticz/plugins
-git clone -b dist https://github.com/Rouzax/luxtronik-domoticz-plugin-v2.git luxtronikex
-```
-Update with:
-```sh
-git -C /path/to/domoticz/plugins/luxtronikex pull
-```
-
-### Option 3: Plugin manager
-
-If you use a Domoticz plugin manager (for example domoticz-plugins-manager or PyPluginStore), register this repository and point it at the **`dist`** branch so it installs the runtime-only files.
-
-### Option 4: Full repository (developers)
-
-Clones everything, including tests, docs, and the site page:
-```sh
-cd /path/to/domoticz/plugins
-git clone https://github.com/Rouzax/luxtronik-domoticz-plugin-v2.git luxtronikex
-```
-
-### Final step: restart and enable
-
-1. **Restart Domoticz**:
-   ```sh
-   sudo systemctl restart domoticz.service
-   ```
-
-2. **Enable the plugin**:
-   - In Domoticz, navigate to **Setup** → **Hardware**
-   - Add a new hardware device and select **Luxtronik Heat Pump Controller v2**
-   - Enter the **IP address** of your heat pump controller. The other settings work as they are; if you have a WZSV, set **Pump power compensation** to your model for a more accurate COP (see [Configuration](#configuration))
-   - Click **Add**. The plugin creates its devices on the first start
-  
-### Upgrading / migrating
-
-> **Upgrading from 2.2.x or older?** The settings moved to new fields. Your previous values stay in use until you next save the plugin's hardware page, but that page shows the defaults, not your values. Before pressing **Update**, choose your values again. The plugin lists them in the Domoticz log at every start until you do ("Settings moved to new fields ... Previous values: ..."), and sends the same list once through your Domoticz notification systems. Saving without choosing them again resets them to the defaults shown. IP address and port are not affected. An update interval above 30 seconds is now limited to 30, and an interval that is not one of the options keeps running until you pick the nearest one.
-
-Your devices and history are tied to the hardware instance (the DeviceID is `luxtronikex_hw<HardwareID>`), not to the plugin folder, so you can change folders or switch install method without losing anything, as long as you keep the same hardware entry in Domoticz.
-
-One rule: keep exactly **one** copy of the plugin. Domoticz scans every `plugins/*/plugin.py`, so two folders that both contain this plugin would register it twice. When migrating, **replace** the old folder, do not add a second one.
-
-- **From the full clone to the lean branch:** delete the old plugin folder, then reinstall with Option 1 or 2 (into `plugins/luxtronikex/`) and restart Domoticz. Your hardware and devices return unchanged. (In-place alternative: `cd <old folder> && git fetch origin dist && git checkout dist`; this works, but `dist` is an orphan branch so the on-disk `.git` keeps the old history, a fresh clone is leaner.)
-- **Plugin-manager installs:** an existing manager install stays on the branch it was cloned from; uninstall and reinstall it through the manager to switch to the lean branch. New manager installs use `dist` automatically.
-
-## Screenshots
-
-<details>
-<summary>Click to expand screenshots</summary>
-
-### Utility Devices
-![Utility Devices](https://github.com/user-attachments/assets/2e36ea32-a578-4e54-835f-b9cfd6835e24)
-
-### Temperature Devices
-![Temperature Devices](https://github.com/user-attachments/assets/2f9d1438-6572-4afe-9de3-2fe99d69ca8e)
-
-### Switch Devices
-![Switch Devices](https://github.com/user-attachments/assets/fa9195f6-0780-49e6-961f-196bc92405cb)
-
-</details>
+> **Upgrading from 2.2.x or older?** The settings moved to new fields. Your previous values stay in use until you next save the plugin's hardware page, but that page shows the defaults, not your values. Choose your values again before pressing **Update**; the plugin lists them in the Domoticz log at every start until you do. See [Upgrading from 2.2.x or older](https://rouzax.github.io/luxtronik-domoticz-plugin/install/#upgrading-from-22x-or-older).
 
 ## Configuration
 
-| Setting | Description | Default |
-|---------|-------------|---------|
-| IP address | IP address of the Luxtronik controller | `127.0.0.1` |
-| Port | TCP port of the controller | `8889` |
-| Language | Language of device names. **Same as Domoticz** uses the Domoticz interface language when it is one of the supported languages, otherwise English. Names you changed yourself are kept | Same as Domoticz |
-| Update interval | How often the heat pump is read: 10, 15, 20 or 30 seconds | 20 seconds |
-| Pump power compensation | Adds estimated circulation pump power to the compressor reading; see [Pump power compensation](#pump-power-compensation) | Off |
-| Heating pump min / max (W), Brine pump min / max (W) | Pump power ranges, shown only when Pump power compensation is **Custom** | `2` / `60`, `3` / `140` |
-| Max COP value | COP readings above this are discarded as measurement artifacts. 0 or empty turns the filter off | `30` |
-| Update check | Daily check for a newer release; see [Update check](#update-check) | Automatic |
-| Debug level | Debug log level for troubleshooting | None |
+Only the IP address is needed for a working install. Two things are worth doing for accurate COP figures:
 
-### Pump power compensation
+- Set **Pump power compensation** to your heat pump model, or Custom with your pump's values. See [Pump power compensation](https://rouzax.github.io/luxtronik-domoticz-plugin/settings/#pump-power-compensation).
+- Enable **Setup → Settings → Log History → "Only add newly received values to the Log"** in Domoticz. See [COP accuracy](https://rouzax.github.io/luxtronik-domoticz-plugin/settings/#cop-accuracy).
 
-The controller's power reading only measures compressor power, which makes COP look better than it is. Choose your heat pump model and the plugin adds the estimated power of the heating circulation pump (HUP) and the brine pump (VBO), based on their current speed, to the power reading. All power and COP devices then use the corrected value.
+Every setting is described on the [Settings](https://rouzax.github.io/luxtronik-domoticz-plugin/settings/) page.
 
-| Option | Heating pump | Brine pump |
-|--------|--------------|------------|
-| WZSV 62 | 2 to 60 W | 5 to 87 W |
-| WZSV 92 | 2 to 60 W | 3 to 140 W |
-| WZSV 122 | 2 to 60 W | 3 to 180 W |
-| WZSV 162 | 2 to 60 W | 3 to 180 W |
-| Custom | the four values you enter | |
+## Documentation
 
-The model values come from the technical data in the WZSV installation manual and apply to the variants with and without cooling. For another heat pump, or after replacing a pump, choose **Custom** and enter the minimum and maximum power from the pump's data. If a custom value is invalid (not a number, negative, or a minimum above its maximum), compensation stays off and the Domoticz log names the field to correct.
+- [Installation](https://rouzax.github.io/luxtronik-domoticz-plugin/install/)
+- [Settings](https://rouzax.github.io/luxtronik-domoticz-plugin/settings/)
+- [Devices](https://rouzax.github.io/luxtronik-domoticz-plugin/devices/): all 71 devices with unit numbers
+- [Migrating from v1](https://rouzax.github.io/luxtronik-domoticz-plugin/migration/): bring your history over from the original plugin
+- [Troubleshooting / FAQ](https://rouzax.github.io/luxtronik-domoticz-plugin/faq/)
+- [Security](https://rouzax.github.io/luxtronik-domoticz-plugin/security/)
 
-### Update check
+## Development
 
-Once a day (the first check 5 minutes after the plugin starts) the plugin asks GitHub for its list of releases. When a newer version exists it writes one line to the Domoticz log and sends one notification through every notification system configured in Domoticz (**Setup → Settings → Notifications**), with a link to the release page. Each version is announced once; the plugin remembers it across restarts. The check sends nothing about you or your heat pump, and it never installs anything.
-
-| Option | What is reported |
-|--------|------------------|
-| Automatic | Betas while you run a beta, only stable releases while you run a stable one |
-| Stable releases only | Stable releases |
-| Including betas | Stable releases and betas |
-| Off | Nothing; GitHub is never contacted |
-
-If GitHub cannot be reached the check tries again a day later; the failure is logged only at the Comms debug level.
-
-### COP Accuracy Recommendation
-
-For accurate COP averages over time, enable the following Domoticz setting:
-
-**Settings → Log History → 'Only add newly received values to the Log'**
-
-When disabled (default), Domoticz fills in the last received value every 5 minutes even when the heat pump is idle, skewing COP averages. When enabled, no values are logged during idle periods, giving accurate daily/monthly efficiency averages.
-
-> **Note:** This is a system-wide Domoticz setting that affects all devices, not just this plugin.
-
-The controller's power reading only measures compressor power; set [Pump power compensation](#pump-power-compensation) to your model for a true system COP.
-
-### Security Notes
-
-- The Luxtronik protocol uses plain TCP without encryption (hardware limitation)
-- Keep your heat pump on a trusted LAN/VLAN; do not expose to the internet
-- Use a VPN if remote access is required
-
-## Created Devices
-
-The plugin creates 68 devices organized into 14 logical groups. Devices marked with `Used=0` are created but set to unused by default; enable them in Domoticz if needed.
-
-### Device Groups Overview
-
-| Group | Units | Description | Count |
-|-------|-------|-------------|-------|
-| 1 | 1 | Status Overview | 1 |
-| 2 | 10-16 | User Controls *(all writable)* | 7 |
-| 3 | 30-32 | Power Input | 3 |
-| 4 | 40-42 | Heat Output | 3 |
-| 5 | 50-52 | Efficiency (COP) | 3 |
-| 6 | 60-67 | Heating Circuit | 8 |
-| 7 | 80 | DHW | 1 |
-| 8 | 90-93 | Environment | 4 |
-| 9 | 100-106 | Source Circuit | 7 |
-| 10 | 120-131 | Mixing Circuits | 4 |
-| 11 | 140-145 | Compressor | 6 |
-| 12 | 160-174 | Refrigerant Circuit | 12 |
-| 13 | 180-185 | Statistics & Counters | 6 |
-| 14 | 200-202 | Diagnostics | 3 |
-
----
-
-### Group 1: Status Overview (Unit 1)
-
-| Unit | Device | Description |
-|------|--------|-------------|
-| 1 | Working mode | Current operating state text (Heating, DHW, Cooling, Idle) |
-
----
-
-### Group 2: User Controls (Units 10-16) — ALL WRITABLE
-
-All control devices are consolidated in this group for easy access.
-
-| Unit | Device | Description |
-|------|--------|-------------|
-| 10 | Heating mode | Selector: Automatic, 2nd heat source, Party, Holidays, Off |
-| 11 | Hot water mode | Selector: Automatic, 2nd heat source, Party, Holidays, Off |
-| 12 | DHW Power Mode | Selector: Normal, Luxury |
-| 13 | Cooling | On/Off switch |
-| 14 | Temp adjust | Heating curve adjustment (-5 to +5°C) *(unused by default)* |
-| 15 | DHW temp target | Hot water target setpoint (30-65°C) *(unused by default)* |
-| 16 | Room temp setpoint | Room temperature setpoint (15-30°C) |
-
----
-
-### Group 3: Power Input (Units 30-32)
-
-Electrical power consumption from the grid.
-
-| Unit | Device | Description |
-|------|--------|-------------|
-| 30 | Power total | Total electrical consumption (kWh meter) |
-| 31 | Power heating | Consumption during heating mode only |
-| 32 | Power DHW | Consumption during DHW mode only |
-
----
-
-### Group 4: Heat Output (Units 40-42)
-
-Thermal energy delivered to the building.
-
-| Unit | Device | Description |
-|------|--------|-------------|
-| 40 | Heat out total | Total thermal energy produced (kWh meter) |
-| 41 | Heat out heating | Heat output during heating mode |
-| 42 | Heat out DHW | Heat output during DHW mode |
-
----
-
-### Group 5: Efficiency (Units 50-52)
-
-Coefficient of Performance measurements. **Gated**: only updates during steady-state operation.
-
-| Unit | Device | Description |
-|------|--------|-------------|
-| 50 | COP total | Overall system efficiency (heat out ÷ power in) |
-| 51 | COP heating | Efficiency for heating mode only |
-| 52 | COP DHW | Efficiency for DHW mode only |
-
----
-
-### Group 6: Heating Circuit (Units 60-67)
-
-Complete heating circuit monitoring including temperatures, spreads, pump, and flow.
-
-| Unit | Device | Description |
-|------|--------|-------------|
-| 60 | Heat supply temp | Flow temperature to heating system |
-| 61 | Heat return temp | Return temperature from heating system |
-| 62 | Return temp target | Calculated target return temperature |
-| 63 | Heating ΔT | Temperature difference (supply - return), **gated** (also updates during passive cooling) |
-| 64 | Heating ΔT target | Controller's ΔT setpoint *(unused by default)* |
-| 65 | Heating ΔT actual | Controller's measured ΔT *(unused by default)* |
-| 66 | Heating pump | Circulation pump speed (%) |
-| 67 | Heating flow | Flow rate through heating circuit (l/h) *(unused by default)* |
-
----
-
-### Group 7: DHW (Unit 80)
-
-Domestic hot water tank temperature.
-
-| Unit | Device | Description |
-|------|--------|-------------|
-| 80 | DHW temp | Current hot water temperature |
-
----
-
-### Group 8: Environment (Units 90-93)
-
-Outdoor and room temperature sensors.
-
-| Unit | Device | Description |
-|------|--------|-------------|
-| 90 | Outside temp | Ambient outdoor temperature |
-| 91 | Outside temp avg | Time-averaged outdoor temperature *(unused by default)* |
-| 92 | Room temp | Current room temperature sensor |
-| 93 | Room temp target | Room temperature target *(unused by default)* |
-
----
-
-### Group 9: Source Circuit (Units 100-106)
-
-Ground loop / brine circuit monitoring including temperatures, spreads, pump, and flow.
-
-| Unit | Device | Description |
-|------|--------|-------------|
-| 100 | Source inlet temp | Temperature from ground/well source |
-| 101 | Source outlet temp | Temperature returning to ground/well |
-| 102 | Source ΔT | Source temperature difference, **gated** (also updates during passive cooling) |
-| 103 | Source ΔT target | Controller's source ΔT setpoint *(unused by default)* |
-| 104 | Source ΔT actual | Controller's measured source ΔT *(unused by default)* |
-| 105 | Source pump | Brine circulation pump speed (%) |
-| 106 | Source flow | Flow rate through source circuit (l/h) |
-
----
-
-### Group 10: Mixing Circuits (Units 120-131)
-
-Optional mixing valve circuits for zone control.
-
-| Unit | Device | Description |
-|------|--------|-------------|
-| 120 | Circuit 1 temp | Mixing circuit 1 current temp *(unused by default)* |
-| 121 | Circuit 1 target | Mixing circuit 1 target temp *(unused by default)* |
-| 130 | Circuit 2 temp | Mixing circuit 2 current temp *(unused by default)* |
-| 131 | Circuit 2 target | Mixing circuit 2 target temp *(unused by default)* |
-
----
-
-### Group 11: Compressor (Units 140-145)
-
-Compressor operational metrics.
-
-| Unit | Device | Description |
-|------|--------|-------------|
-| 140 | Compressor freq | Current compressor speed (Hz) |
-| 141 | Compressor target freq | Controller's target frequency *(unused by default)* |
-| 142 | Compressor min freq | Minimum allowed frequency *(unused by default)* |
-| 143 | Compressor max freq | Maximum allowed frequency *(unused by default)* |
-| 144 | Compressor capacity | Load relative to maximum (%), **gated** |
-| 145 | Freq headroom | Target frequency minus actual (Hz); modulation headroom remaining; updates while compressor runs |
-
----
-
-### Group 12: Refrigerant Circuit (Units 160-174)
-
-Refrigerant temperatures, pressures, and derived diagnostics.
-
-| Unit | Device | Description |
-|------|--------|-------------|
-| 160 | Hot gas temp | Compressor discharge temperature |
-| 161 | Suction temp | Compressor inlet temperature |
-| 162 | Compressor heating temp | LIN inverter/compressor-body heating sensor (calc 177) |
-| 163 | Evaporating temp | Refrigerant evaporation point |
-| 164 | Condensing temperature | Controller's computed condensing (saturation) temperature (calc 233) |
-| 165 | Superheat | Refrigerant superheat (K), **gated** |
-| 166 | Pressure high | High-side pressure (bar), **gated** |
-| 167 | Pressure low | Low-side pressure (bar), **gated** |
-| 171 | Refrigerant lift | Condensing temp minus evaporating temp (K); primary COP driver, **gated** |
-| 172 | Condensing-supply ΔT | Condensing temp minus condenser leaving-water (supply) temp (K), **signed**: positive = condenser headroom (low-temp heating; rising trend hints at fouling/low flow), negative = desuperheat-dominated (DHW/high water temps), **gated** |
-| 173 | Discharge headroom | Margin to hot-gas trip: T-HG max setpoint minus hot gas temp (K); compressor health/margin-to-cutoff, **gated** |
-| 174 | Compression ratio | High/low pressure ratio on absolute pressures; a rising trend flags refrigerant-circuit degradation, **gated** |
-
----
-
-### Group 13: Statistics & Counters (Units 180-185)
-
-Lifetime statistics and runtime counters.
-
-| Unit | Device | Description |
-|------|--------|-------------|
-| 180 | Compressor hours | Lifetime operating hours |
-| 181 | Compressor starts | Total start count |
-| 182 | Compressor last cycle | Duration of last completed cycle (minutes) |
-| 183 | Heating runtime | Total heating mode runtime *(unused by default)* |
-| 184 | DHW runtime | Total DHW mode runtime *(unused by default)* |
-| 185 | Cooling runtime | Total cooling mode runtime *(unused by default)* |
-
----
-
-### Group 14: Diagnostics (Units 200-201)
-
-System health indicators.
-
-| Unit | Device | Description |
-|------|--------|-------------|
-| 200 | Error count | Number of stored errors *(unused by default)* |
-| 201 | Cooling permitted | Whether cooling is currently allowed *(unused by default)* |
-| 202 | Cooling release | Countdown timer until cooling is permitted (HH:MM:SS) *(unused by default)* |
-
----
-
-### Notes on Gated Devices
-
-Devices marked **gated** only update during steady-state compressor operation (when actual frequency ≥ minimum target frequency). This prevents meaningless readings from skewing statistical averages when the system is idle or ramping up. Temperature difference devices (Units 63, 102) also update during passive cooling, since circulation pumps are active and ΔT values remain physically meaningful.
-
-### Reserved Unit Ranges
-
-Each group has reserved unit numbers for future expansion:
-- Units 2-9, 17-29, 33-39, 43-49, 53-59, 68-79, 81-89, 94-99, 107-119, 122-129, 132-139, 146-159, 175-179, 186-199, 203-209
-
-## Debugging
-
-Enable debug levels in the plugin configuration:
-
-| Level | Output | Use Case |
-|-------|--------|----------|
-| None | Errors only | Normal operation |
-| Basic | Status() messages | Lifecycle tracking, visible in Domoticz log |
-| Basic + Device | + device changes | Troubleshoot device updates |
-| Basic + Comms | + connection/protocol | Network issues, command failures |
-| Basic + Device + Comms | Both above | General troubleshooting |
-| All | Everything | Deep debugging |
-
-Debug messages appear in the Domoticz log (**Setup → Log**). BASIC level messages also appear in the hardware status.
-
-## Troubleshooting
-
-### Connection Issues
-- Verify the Luxtronik controller is reachable: `ping <ip-address>`
-- Check the correct port (default: 8889)
-- Ensure no firewall blocks the connection
-
-### Missing Devices
-After adding the plugin, devices are created automatically. If devices appear missing:
-1. Check **Setup → Devices** for unused devices
-2. Enable devices by setting them to "Used"
-3. Check the debug log for creation errors
-
-### Device Names Not Translating
-Device names only update automatically if they match a known translation. User-customized names are preserved. To reset to translated names, delete the device—it will be recreated on the next heartbeat.
-
-### COP Values Seem Wrong
-1. Enable "Only add newly received values" in Domoticz settings
-2. Ensure you're looking at periods when the heat pump was actively running
-3. COP is only logged during steady-state operation (compressor at target speed)
-4. Adjust the Max COP value setting if legitimate readings are being filtered (default 30), or set it to 0 or empty to disable filtering
-
-### Settings Back at Defaults After Upgrading
-The settings moved to new fields in this version. Saving the hardware page before choosing your values again stores the defaults it shows. Choose your values again and press **Update**. If you still have the notification or the log line from before that save ("Settings moved to new fields ... Previous values: ..."), it lists the values to choose.
-
-### Write Commands Not Working
-The plugin validates all write operations against an allowlist. Check the debug log for "WRITE BLOCKED" messages. Only the control devices (units 10-16) support write operations.
-
-## Migration from Legacy Plugin
-
-The new plugin uses a different key (`luxtronikex` vs `luxtronik`), allowing both plugins to run simultaneously during migration. 
-
-See [`migration/README.md`](migration/README.md) for detailed instructions and SQL scripts.
-
-### Quick Migration
-
-```bash
-# 1. Backup
-sudo systemctl stop domoticz
-cp domoticz.db domoticz.db.backup
-sudo systemctl start domoticz
-
-# 2. Install new plugin, add hardware in Domoticz as "HPNEW" or whatever name
-
-# 3. Migrate (auto-detects both plugins)
-sudo systemctl stop domoticz
-sqlite3 domoticz.db < plugins/luxtronik-domoticz-plugin-v2/migration/migrate.sql
-sudo systemctl start domoticz
-
-# 4. Verify graphs, then disable old plugin and rename new one
-```
-
-## Files
+### Files
 
 | File | Purpose |
 |------|---------|
@@ -522,7 +89,7 @@ sudo systemctl start domoticz
 | `migration/migrate.sql` | Migrate historical data from legacy plugin |
 
 
-### Development Notes
+### Development notes
 
 - The plugin uses the DomoticzEx framework (`import DomoticzEx`)
 - Every Domoticz call goes through `domoticz_api.py`, so the other modules can be tested without Domoticz
@@ -540,8 +107,19 @@ Building tools that solve my own problems and sharing them in the hope they solv
 
 ## Changelog
 
+### Version 3.1.0
+- Added: Unit 203 "Last fault" shows the controller's newest stored fault as code, message and time (for example "790: Severe inverter fault (2022-07-15 13:18)"), in Dutch, German, Polish or English (French uses English). A new fault is also written to the log and sent once through every Domoticz notification system. See [Fault codes](https://rouzax.github.io/luxtronik-domoticz-plugin/fault-codes/).
+- Added: Unit 204 "Firmware" and Unit 205 "Heat pump type" (unused by default).
+- Changed: Working mode shows all eight controller states. An EVU lock now shows "EVU" instead of "Cooling", and defrost, external heating and active cooling no longer show "No requirement".
+- Fixed: with pump power compensation on, Working mode never showed "Idle" while the circulation pump ran; it now goes by the compressor's own power.
+- Fixed: gated devices waited about 40 seconds instead of 2 minutes after the compressor reached steady speed; the wait is now measured in time.
+- Fixed: Refrigerant lift (Unit 171) and Condensing-supply ΔT (Unit 172) updated during passive cooling, with the compressor off.
+- Fixed: a selector level that does not exist (for example from a script) was turned into Automatic or a neighbouring mode and written to the heat pump; it is now refused. The Cooling switch only writes for an exact On or Off command.
+- Fixed: when Domoticz refused new devices ("Accept new devices" off), the plugin still logged them as created; it now names them in one warning with how to allow them.
+- Docs: a documentation site at https://rouzax.github.io/luxtronik-domoticz-plugin/, linked from the hardware page; repository links point to the renamed repository.
+
 ### Version 3.0.0
-- Changed: the settings page is reorganised. Pump power compensation is chosen by heat pump model (WZSV 62, 92, 122, 162) with values from the WZSV manual, or Custom with four separate fields; Language defaults to "Same as Domoticz"; the update interval is a choice of 10, 15, 20 or 30 seconds (the maximum is now 30); invalid custom pump values are reported by field. Existing values keep working until the hardware page is next saved, and the plugin lists them in the log and in a one-time notification; choose them again before saving (see [Upgrading / migrating](#upgrading--migrating)).
+- Changed: the settings page is reorganised. Pump power compensation is chosen by heat pump model (WZSV 62, 92, 122, 162) with values from the WZSV manual, or Custom with four separate fields; Language defaults to "Same as Domoticz"; the update interval is a choice of 10, 15, 20 or 30 seconds (the maximum is now 30); invalid custom pump values are reported by field. Existing values keep working until the hardware page is next saved, and the plugin lists them in the log and in a one-time notification; choose them again before saving (see [Upgrading from 2.2.x or older](https://rouzax.github.io/luxtronik-domoticz-plugin/install/#upgrading-from-22x-or-older)).
 - Added: daily update check with a new **Update check** setting (Automatic, Stable releases only, Including betas, Off); a newer release is announced once in the log and through every Domoticz notification system.
 - Fixed: the description of Unit 202 "Cooling release" was English in every language; it is now translated, and existing devices pick it up on the next start unless you edited the description.
 - Requires Domoticz 2026.1 or newer and Python 3.11 or newer.
@@ -601,7 +179,3 @@ Building tools that solve my own problems and sharing them in the hope they solv
 - COP logging setting check with user notification
 - Enhanced debug levels (Basic, Device, Comms, Verbose)
 - SQL migration scripts for historical data transfer
-
-### Previous Versions
-See the original repository for earlier changelog entries.
-https://github.com/Rouzax/luxtronik-domoticz-plugin

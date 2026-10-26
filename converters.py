@@ -4,13 +4,18 @@ Extracted from plugin.py. Does not import DomoticzEx or plugin.
 Shared runtime state is accessed via the context module.
 """
 
-import math
+import datetime
+import time
 from abc import ABC, abstractmethod
 from typing import Any, Dict, List, Optional, Tuple
 
 import context
 from addresses import ConfigLimits, LuxtronikAddress
 from context import DebugLevel
+from fault_codes import fault_message, heatpump_type
+
+# Patched in tests to drive the settling gate without waiting.
+_monotonic = time.monotonic
 
 # =============================================================================
 # Data Converters (Strategy Pattern)
@@ -19,6 +24,10 @@ from context import DebugLevel
 # Type aliases for converter return types
 DataStore = Dict[str, List[int]]  # command -> data_list
 ConvertResult = Dict[str, Any]  # {'nValue': ..., 'sValue': ...}
+
+# Data store key holding the compressor's own measured power, kept by pump power
+# compensation before it adds the estimated pump power to POWER_TOTAL.
+COMPRESSOR_POWER_KEY = "COMPRESSOR_POWER"
 GatedResult = Tuple[Optional[ConvertResult], Optional[str]]  # (result, gate_reason)
 
 
@@ -53,16 +62,19 @@ class SteadyStateGateMixin:
     gate signal. Returns a reason string if gated, None if gate passes.
 
     Gate Logic:
-    - If min_target_freq <= 0: System is idle, gate closed, counter resets
-    - If actual_freq < min_target_freq: System is ramping up, gate closed, counter resets
-    - If freq >= min_target: Increment counter; gate opens only after N consecutive
-      heartbeats where N = ceil(SETTLING_SECONDS / heartbeat_interval)
+    - If min_target_freq <= 0: System is idle, gate closed, the wait restarts
+    - If actual_freq < min_target_freq: System is ramping up, gate closed, the wait restarts
+    - If freq >= min_target: gate opens once SETTLING_SECONDS have elapsed since the
+      compressor first reached its minimum target frequency in this run
 
     The settling requirement ensures thermal equilibrium before trusting readings.
     Live data showed ~2-3 minutes needed for stabilization after compressor start.
     """
 
-    _steady_count: int = 0
+    # When the compressor first reached its minimum target frequency in the current run, or
+    # None while idle or ramping. Measured in elapsed time rather than gate checks because one
+    # converter instance is shared by several devices, each checking once per heartbeat.
+    _steady_since: Optional[float] = None
 
     def check_steady_state(self, data_store: DataStore) -> Optional[str]:
         """Check if compressor is at steady-state operating speed.
@@ -77,7 +89,7 @@ class SteadyStateGateMixin:
         if len(calc_data) <= max(
             LuxtronikAddress.COMPRESSOR_FREQ, LuxtronikAddress.COMPRESSOR_FREQ_MIN
         ):
-            self._steady_count = 0
+            self._steady_since = None
             return "insufficient data"
 
         try:
@@ -86,21 +98,21 @@ class SteadyStateGateMixin:
 
             # Idle state: min_target is 0
             if min_target_freq <= 0:
-                self._steady_count = 0
+                self._steady_since = None
                 return f"idle (freq={actual_freq:.0f} Hz, min_target=0)"
 
             # Startup ramp: actual hasn't reached minimum target yet
             if actual_freq < min_target_freq:
-                self._steady_count = 0
+                self._steady_since = None
                 return f"ramping (freq={actual_freq:.0f} Hz < {min_target_freq:.0f} Hz)"
 
-            # Frequency is at target -- count consecutive heartbeats
-            self._steady_count += 1
-            required = math.ceil(ConfigLimits.SETTLING_SECONDS / context.heartbeat_interval)
-
-            if self._steady_count < required:
+            now = _monotonic()
+            if self._steady_since is None:
+                self._steady_since = now
+            elapsed = now - self._steady_since
+            if elapsed < ConfigLimits.SETTLING_SECONDS:
                 return (
-                    f"settling ({self._steady_count}/{required} heartbeats, "
+                    f"settling ({elapsed:.0f}/{ConfigLimits.SETTLING_SECONDS} s, "
                     f"freq={actual_freq:.0f} Hz)"
                 )
 
@@ -108,7 +120,7 @@ class SteadyStateGateMixin:
             return None
 
         except (IndexError, TypeError, ValueError) as e:
-            self._steady_count = 0
+            self._steady_since = None
             return f"error checking frequency: {e}"
 
 
@@ -337,16 +349,22 @@ class GatedTempDiffConverter(SteadyStateGateMixin, DataConverter):
     """Temperature difference converter with steady-state gating.
 
     Returns tuple (result, gate_reason) - result is None when gated.
-    Used for brine and heating delta-T which approach zero when loops equilibrate.
+
+    passive_cooling_bypass lets values through during passive cooling. That suits the water
+    delta-T of the heating and brine loops, whose pumps keep running then; refrigerant
+    differences need a running compressor and are built without it.
     """
+
+    def __init__(self, passive_cooling_bypass: bool = True):
+        self.passive_cooling_bypass = passive_cooling_bypass
 
     def convert(
         self, data_store: DataStore, command: str, indices: List[int], divider: float
     ) -> GatedResult:
-        # Allow updates during passive cooling (pumps running, delta-T is meaningful)
         calc_data = data_store.get("READ_CALCUL", [])
         passive_cooling = (
-            len(calc_data) > LuxtronikAddress.PASSIVE_COOLING_FLAG
+            self.passive_cooling_bypass
+            and len(calc_data) > LuxtronikAddress.PASSIVE_COOLING_FLAG
             and int(calc_data[LuxtronikAddress.PASSIVE_COOLING_FLAG]) == 1
         )
 
@@ -370,8 +388,17 @@ class GatedTempDiffConverter(SteadyStateGateMixin, DataConverter):
 class TextStateConverter(DataConverter):
     """Converts heat pump state to text status."""
 
-    # Map Luxtronik mode values to WORKING_MODE_STATUSES keys
-    MODE_NAMES = {0: "Heating", 1: "DHW", 2: "Swimming pool", 3: "Cooling", 4: "No requirement"}
+    # calc[80] operating mode codes (python-luxtronik OperationMode) -> WORKING_MODE_STATUSES keys
+    MODE_NAMES = {
+        0: "Heating",
+        1: "DHW",
+        2: "Swimming pool",
+        3: "EVU",
+        4: "Defrost",
+        5: "No requirement",
+        6: "Heating ext.",
+        7: "Cooling",
+    }
 
     def convert(
         self, data_store: DataStore, command: str, address: int, config: List
@@ -387,7 +414,10 @@ class TextStateConverter(DataConverter):
                 return {"nValue": 0, "sValue": translate("Cooling")}
 
             power_idx, power_threshold = config
-            current_power = float(data_list[power_idx])
+            # Idle means the compressor uses no power. Pump power compensation adds the
+            # circulation pumps to POWER_TOTAL, so prefer the compressor's own reading.
+            measured = data_store.get(COMPRESSOR_POWER_KEY)
+            current_power = float(measured[0] if measured else data_list[power_idx])
             current_mode = data_list[address]
 
             if current_power <= power_threshold:
@@ -400,6 +430,66 @@ class TextStateConverter(DataConverter):
                 f"TextStateConverter error: {type(e).__name__}: {e}", DebugLevel.VERBOSE
             )
             return {"nValue": 0, "sValue": translate("Idle")}
+
+
+class LastFaultConverter(DataConverter):
+    """The controller's newest stored fault as '<code>: <message> (<local time>)'.
+
+    The fault time is a UTC epoch; it is shown in the local time of the Domoticz host.
+    """
+
+    def convert(
+        self, data_store: DataStore, command: str, address: int, time_address: int
+    ) -> Optional[ConvertResult]:
+        try:
+            data_list = data_store.get(command, [])
+            code = int(data_list[address])
+            if code <= 0:
+                return {"nValue": 0, "sValue": translate("No faults")}
+            message = fault_message(code, context.translator.language) or translate("Unknown fault")
+            text = f"{code}: {message}"
+            stamp = int(data_list[time_address])
+            if stamp > 0:
+                local = datetime.datetime.fromtimestamp(stamp)
+                text += f" ({local:%Y-%m-%d %H:%M})"
+            return {"nValue": 0, "sValue": text}
+        except (IndexError, TypeError, ValueError, OverflowError, OSError) as e:
+            context.logger.log(
+                f"LastFaultConverter error: {type(e).__name__}: {e}", DebugLevel.VERBOSE
+            )
+            return None
+
+
+class FirmwareVersionConverter(DataConverter):
+    """Controller firmware version, stored one character per address (e.g. 'V3.92.3')."""
+
+    LENGTH = 10
+
+    def convert(self, data_store: DataStore, command: str, address: int) -> Optional[ConvertResult]:
+        try:
+            data_list = data_store.get(command, [])
+            chars = data_list[address : address + self.LENGTH]
+            version = "".join(chr(c) for c in chars if 0 < c < 128).strip()
+            return {"nValue": 0, "sValue": version} if version else None
+        except (TypeError, ValueError) as e:
+            context.logger.log(
+                f"FirmwareVersionConverter error: {type(e).__name__}: {e}", DebugLevel.VERBOSE
+            )
+            return None
+
+
+class HeatpumpTypeConverter(DataConverter):
+    """Heat pump type code as its model designation, or 'Code <n>' when unknown."""
+
+    def convert(self, data_store: DataStore, command: str, address: int) -> Optional[ConvertResult]:
+        try:
+            code = int(data_store.get(command, [])[address])
+            return {"nValue": 0, "sValue": heatpump_type(code) or f"Code {code}"}
+        except (IndexError, TypeError, ValueError) as e:
+            context.logger.log(
+                f"HeatpumpTypeConverter error: {type(e).__name__}: {e}", DebugLevel.VERBOSE
+            )
+            return None
 
 
 class COPCalculatorConverter(SteadyStateGateMixin, DataConverter):
@@ -744,16 +834,20 @@ class WriteConverter(ABC):
     """Abstract base class for write converters."""
 
     @abstractmethod
-    def convert(self, **kwargs) -> int:
-        """Convert command to value for writing."""
+    def convert(self, **kwargs) -> Optional[int]:
+        """Convert a command to the value to write, or None when nothing may be written."""
         pass
 
 
 class CommandToNumberConverter(WriteConverter):
     """Converts On/Off command to number."""
 
-    def convert(self, Command: str = "", **kwargs) -> int:
-        return 1 if Command == "On" else 0
+    _VALUES = {"On": 1, "Off": 0}
+
+    def convert(self, Command: str = "", **kwargs) -> Optional[int]:
+        # Domoticz resolves Toggle to On or Off before calling the plugin, so anything else is a
+        # stray command and must not be read as Off.
+        return self._VALUES.get(Command)
 
 
 class LevelWithDividerConverter(WriteConverter):
@@ -773,17 +867,16 @@ class AvailableWritesConverter(WriteConverter):
         self.divider = divider
         self.writes_idx = writes_idx
 
-    def convert(self, available_writes: Dict, Level: int = 0, **kwargs) -> int:
+    def convert(self, available_writes: Dict, Level: int = 0, **kwargs) -> Optional[int]:
+        """The controller value for a selector level, or None when the level is not one of the
+        selector's levels. Never falls back to another option: a script sending a wrong level
+        would otherwise switch the heat pump to a mode nobody chose."""
         try:
             values = available_writes[self.writes_idx].get_val()
-            index = int(Level / self.divider)
-            if 0 <= index < len(values):
-                return values[index]
-            else:
-                context.logger.error(
-                    f"Level {Level} (index {index}) out of range for writes_idx {self.writes_idx}"
-                )
-                return values[0] if values else 0
+            index, remainder = divmod(Level, self.divider)
+            if remainder == 0 and 0 <= index < len(values):
+                return values[int(index)]
+            return None
         except (KeyError, IndexError, TypeError) as e:
             context.logger.error("AvailableWritesConverter error", exc=e)
-            return 0
+            return None
