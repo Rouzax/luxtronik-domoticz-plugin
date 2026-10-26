@@ -547,12 +547,31 @@ class TestTextStateConverter:
         )
         assert result == {"nValue": 0, "sValue": "DHW"}
 
-    def test_cooling_mode(self):
-        # mode=3 (Cooling)
+    @pytest.mark.parametrize(
+        "code, name",
+        [
+            (0, "Heating"),
+            (1, "DHW"),
+            (2, "Swimming pool"),
+            (3, "EVU"),
+            (4, "Defrost"),
+            (5, "No requirement"),
+            (6, "Heating ext."),
+            (7, "Cooling"),
+        ],
+    )
+    def test_controller_mode_codes(self, code, name):
+        # calc[80] codes as defined by the Luxtronik protocol (python-luxtronik OperationMode).
         result = converters.TextStateConverter().convert(
-            ds({80: 3, 268: 1000}), "READ_CALCUL", 80, [268, 50]
+            ds({80: code, 268: 1000}), "READ_CALCUL", 80, [268, 50]
         )
-        assert result == {"nValue": 0, "sValue": "Cooling"}
+        assert result == {"nValue": 0, "sValue": name}
+
+    def test_every_mode_name_is_translated(self):
+        from translations import WORKING_MODE_STATUSES, Language
+
+        for name in converters.TextStateConverter.MODE_NAMES.values():
+            assert set(WORKING_MODE_STATUSES[name]) == set(Language), name
 
     def test_passive_cooling_flag_overrides_mode_and_power(self):
         """PINNED: PASSIVE_COOLING_FLAG=1 returns 'Cooling' regardless of power/mode.

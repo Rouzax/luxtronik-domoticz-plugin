@@ -382,8 +382,17 @@ class GatedTempDiffConverter(SteadyStateGateMixin, DataConverter):
 class TextStateConverter(DataConverter):
     """Converts heat pump state to text status."""
 
-    # Map Luxtronik mode values to WORKING_MODE_STATUSES keys
-    MODE_NAMES = {0: "Heating", 1: "DHW", 2: "Swimming pool", 3: "Cooling", 4: "No requirement"}
+    # calc[80] operating mode codes (python-luxtronik OperationMode) -> WORKING_MODE_STATUSES keys
+    MODE_NAMES = {
+        0: "Heating",
+        1: "DHW",
+        2: "Swimming pool",
+        3: "EVU",
+        4: "Defrost",
+        5: "No requirement",
+        6: "Heating ext.",
+        7: "Cooling",
+    }
 
     def convert(
         self, data_store: DataStore, command: str, address: int, config: List
