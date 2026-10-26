@@ -105,6 +105,10 @@ Building tools that solve my own problems and sharing them in the hope they solv
 
 [![ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/O0W221GBUG)
 
+## License
+
+MIT, see [LICENSE](LICENSE).
+
 ## Changelog
 
 ### Version 3.1.0
