@@ -32,7 +32,7 @@ Two labels are used in the tables:
 
 | Unit | Device | What it shows |
 |------|--------|---------------|
-| 1 | Working mode | What the heat pump is doing now: Heating, DHW, Swimming pool, EVU (power company lock), Defrost, Heating ext. (external heat source), Cooling, No requirement, or Idle when it uses no power |
+| 1 | Working mode | What the heat pump is doing now: Heating, DHW, Swimming pool, EVU (power company lock), Defrost, Heating ext. (external heat source), Cooling, No requirement, or Idle when the compressor uses no power (also with pump power compensation on) |
 
 ## Controls
 
