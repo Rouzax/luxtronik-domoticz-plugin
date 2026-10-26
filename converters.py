@@ -752,8 +752,12 @@ class WriteConverter(ABC):
 class CommandToNumberConverter(WriteConverter):
     """Converts On/Off command to number."""
 
-    def convert(self, Command: str = "", **kwargs) -> int:
-        return 1 if Command == "On" else 0
+    _VALUES = {"On": 1, "Off": 0}
+
+    def convert(self, Command: str = "", **kwargs) -> Optional[int]:
+        # Domoticz resolves Toggle to On or Off before calling the plugin, so anything else is a
+        # stray command and must not be read as Off.
+        return self._VALUES.get(Command)
 
 
 class LevelWithDividerConverter(WriteConverter):

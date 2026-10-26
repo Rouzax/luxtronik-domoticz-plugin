@@ -646,13 +646,12 @@ class TestCommandToNumberConverter:
     def test_off_returns_zero(self):
         assert converters.CommandToNumberConverter().convert(Command="Off") == 0
 
-    def test_empty_string_returns_zero(self):
-        # PINNED: any value that is not 'On' returns 0
-        assert converters.CommandToNumberConverter().convert(Command="") == 0
+    def test_other_command_returns_none(self):
+        # A stray command must not be read as Off; None means nothing is written.
+        assert converters.CommandToNumberConverter().convert(Command="Set Level") is None
 
-    def test_default_arg_returns_zero(self):
-        # PINNED: Command defaults to '' -> 0
-        assert converters.CommandToNumberConverter().convert() == 0
+    def test_default_arg_returns_none(self):
+        assert converters.CommandToNumberConverter().convert() is None
 
 
 class TestLevelWithDividerConverter:

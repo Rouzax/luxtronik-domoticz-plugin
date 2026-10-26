@@ -147,3 +147,29 @@ def test_selector_level_that_is_not_a_level_writes_nothing(level):
     plugin._plugin_ref.connection.execute_with_retry.assert_not_called()
     messages = " ".join(str(c.args[0]) for c in plugin._logger.error.call_args_list)
     assert "WRITE BLOCKED" in messages
+
+
+@pytest.mark.parametrize("command, expected", [("On", 1), ("Off", 0)])
+def test_cooling_on_and_off_write(command, expected):
+    plugin._plugin_ref = _make_plugin_ref(allowed_values=[0, 1])
+    _register_spec()
+
+    plugin.onCommand(DEVICE_ID, UNIT, command, 0, "")
+
+    plugin._plugin_ref.connection.execute_with_retry.assert_called_once_with(
+        SocketCommand.WRITE_PARAMS, LuxtronikAddress.COOLING_ENABLED, expected
+    )
+
+
+@pytest.mark.parametrize("command", ["Set Level", "Stop", "on", ""])
+def test_cooling_other_commands_write_nothing(command):
+    # Any command other than exactly On/Off must not be read as Off: that would
+    # switch cooling off on the heat pump because of a script error.
+    plugin._plugin_ref = _make_plugin_ref(allowed_values=[0, 1])
+    _register_spec()
+
+    plugin.onCommand(DEVICE_ID, UNIT, command, 0, "")
+
+    plugin._plugin_ref.connection.execute_with_retry.assert_not_called()
+    messages = " ".join(str(c.args[0]) for c in plugin._logger.error.call_args_list)
+    assert "WRITE BLOCKED" in messages
