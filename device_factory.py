@@ -52,6 +52,7 @@ class DeviceFactory:
     _text_state_converter = TextStateConverter()
     _temp_diff_converter = TempDiffConverter()
     _gated_temp_diff_converter = GatedTempDiffConverter()
+    _steady_temp_diff_converter = GatedTempDiffConverter(passive_cooling_bypass=False)
     _command_to_number = CommandToNumberConverter()
     _runtime_hours_converter = RuntimeHoursConverter()
     _integer_value_converter = IntegerValueConverter()
@@ -387,6 +388,7 @@ class DeviceFactory:
         divider: float = 10,
         used: int = 1,
         gated: bool = False,
+        passive_cooling_bypass: bool = True,
     ) -> DeviceSpec:
         """Create a temperature difference device specification.
 
@@ -398,8 +400,15 @@ class DeviceFactory:
             divider: Value divider for temperature conversion
             used: Device used flag (default 1)
             gated: If True, use steady-state gating to skip updates when idle
+            passive_cooling_bypass: With gated, still update during passive cooling (water
+                loops whose pumps keep running); False for refrigerant differences
         """
-        converter = cls._gated_temp_diff_converter if gated else cls._temp_diff_converter
+        if not gated:
+            converter = cls._temp_diff_converter
+        elif passive_cooling_bypass:
+            converter = cls._gated_temp_diff_converter
+        else:
+            converter = cls._steady_temp_diff_converter
         return DeviceSpec(
             unit_id=unit_id,
             spec_id=spec_id,

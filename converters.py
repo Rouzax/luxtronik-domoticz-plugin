@@ -343,16 +343,22 @@ class GatedTempDiffConverter(SteadyStateGateMixin, DataConverter):
     """Temperature difference converter with steady-state gating.
 
     Returns tuple (result, gate_reason) - result is None when gated.
-    Used for brine and heating delta-T which approach zero when loops equilibrate.
+
+    passive_cooling_bypass lets values through during passive cooling. That suits the water
+    delta-T of the heating and brine loops, whose pumps keep running then; refrigerant
+    differences need a running compressor and are built without it.
     """
+
+    def __init__(self, passive_cooling_bypass: bool = True):
+        self.passive_cooling_bypass = passive_cooling_bypass
 
     def convert(
         self, data_store: DataStore, command: str, indices: List[int], divider: float
     ) -> GatedResult:
-        # Allow updates during passive cooling (pumps running, delta-T is meaningful)
         calc_data = data_store.get("READ_CALCUL", [])
         passive_cooling = (
-            len(calc_data) > LuxtronikAddress.PASSIVE_COOLING_FLAG
+            self.passive_cooling_bypass
+            and len(calc_data) > LuxtronikAddress.PASSIVE_COOLING_FLAG
             and int(calc_data[LuxtronikAddress.PASSIVE_COOLING_FLAG]) == 1
         )
 
