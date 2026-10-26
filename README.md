@@ -111,6 +111,7 @@ Building tools that solve my own problems and sharing them in the hope they solv
 - Added: Unit 203 "Last fault" shows the controller's newest stored fault as code, message and time (for example "790: Severe inverter fault (2022-07-15 13:18)"), in Dutch, German, Polish or English (French uses English). A new fault is also written to the log and sent once through every Domoticz notification system. See [Fault codes](https://rouzax.github.io/luxtronik-domoticz-plugin/fault-codes/).
 - Added: Unit 204 "Firmware" and Unit 205 "Heat pump type" (unused by default).
 - Changed: Working mode shows all eight controller states. An EVU lock now shows "EVU" instead of "Cooling", and defrost, external heating and active cooling no longer show "No requirement".
+- Fixed: with pump power compensation on, Working mode never showed "Idle" while the circulation pump ran; it now goes by the compressor's own power.
 - Fixed: gated devices waited about 40 seconds instead of 2 minutes after the compressor reached steady speed; the wait is now measured in time.
 - Fixed: Refrigerant lift (Unit 171) and Condensing-supply ΔT (Unit 172) updated during passive cooling, with the compressor off.
 - Fixed: a selector level that does not exist (for example from a script) was turned into Automatic or a neighbouring mode and written to the heat pump; it is now refused. The Cooling switch only writes for an exact On or Off command.
