@@ -2,7 +2,7 @@
 Luxtronik Heat Pump Controller Plugin v2 - Refactored for DomoticzEx Framework
 Author: Rouzax, 2025 (Refactored)
 
-<plugin key="luxtronikex" name="Luxtronik Heat Pump Controller v2" author="Rouzax" version="3.0.0" externallink="https://github.com/Rouzax/luxtronik-domoticz-plugin-v2">
+<plugin key="luxtronikex" name="Luxtronik Heat Pump Controller v2" author="Rouzax" version="3.0.0" externallink="https://github.com/Rouzax/luxtronik-domoticz-plugin">
     <description>
         <h2>Luxtronik Heat Pump Controller Plugin</h2><br/>
         <p>This plugin connects to Luxtronik-based heat pump controllers using socket communication.</p>
@@ -136,7 +136,7 @@ _heartbeat_interval: int = ConfigLimits.HEARTBEAT_DEFAULT
 # Global translation manager
 _translator = TranslationManager()
 
-REPOSITORY = "Rouzax/luxtronik-domoticz-plugin-v2"
+REPOSITORY = "Rouzax/luxtronik-domoticz-plugin"
 
 
 # =============================================================================

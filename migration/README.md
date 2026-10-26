@@ -1,12 +1,13 @@
 # Migration from Legacy Plugin
 
-These scripts migrate historical data from the legacy Luxtronik plugin (`luxtronik-domoticz-plugin`) to the new DomoticzEx version (`luxtronik-domoticz-plugin-v2`).
+These scripts migrate historical data from the legacy Luxtronik plugin (key `luxtronik`) to the DomoticzEx version (key `luxtronikex`).
 
 ## Prerequisites
 
 - Both plugins installed and configured
 - Old plugin: `plugins/luxtronik-domoticz-plugin/` (key: `luxtronik`)
-- New plugin: `plugins/luxtronik-domoticz-plugin-v2/` (key: `luxtronikex`)
+- New plugin: `plugins/luxtronikex/` (key: `luxtronikex`)
+- This `migration/` folder, downloaded from the repository's `main` branch (it is not in the release zip or the `dist` branch). The commands below assume it sits in the current directory.
 
 ## Migration Steps
 
@@ -25,14 +26,14 @@ Add new hardware in Domoticz (Setup → Hardware) with a temporary name like "HP
 ### 3. (Optional) Preview migration
 
 ```bash
-sqlite3 domoticz.db < plugins/luxtronik-domoticz-plugin-v2/migration/discover.sql
+sqlite3 domoticz.db < migration/discover.sql
 ```
 
 ### 4. Run migration
 
 ```bash
 sudo systemctl stop domoticz
-sqlite3 domoticz.db < plugins/luxtronik-domoticz-plugin-v2/migration/migrate.sql
+sqlite3 domoticz.db < migration/migrate.sql
 sudo systemctl start domoticz
 ```
 

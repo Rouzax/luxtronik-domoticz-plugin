@@ -70,7 +70,7 @@ Pick the method that suits you. Domoticz only needs the plugin's Python modules 
 
 ### Option 1: Release zip (recommended, no git)
 
-1. Download `luxtronikex-vX.Y.Z.zip` from the [Releases](https://github.com/Rouzax/luxtronik-domoticz-plugin-v2/releases) page.
+1. Download `luxtronikex-vX.Y.Z.zip` from the [Releases](https://github.com/Rouzax/luxtronik-domoticz-plugin/releases) page.
 2. Extract it into your Domoticz plugins directory so the files land in `plugins/luxtronikex/`:
    ```sh
    cd /path/to/domoticz/plugins
@@ -84,7 +84,7 @@ The GitHub auto-generated "Source code" zip attached to each release is also run
 Installs only the runtime files and lets you update later with `git pull`:
 ```sh
 cd /path/to/domoticz/plugins
-git clone -b dist https://github.com/Rouzax/luxtronik-domoticz-plugin-v2.git luxtronikex
+git clone -b dist https://github.com/Rouzax/luxtronik-domoticz-plugin.git luxtronikex
 ```
 Update with:
 ```sh
@@ -100,7 +100,7 @@ If you use a Domoticz plugin manager (for example domoticz-plugins-manager or Py
 Clones everything, including tests, docs, and the site page:
 ```sh
 cd /path/to/domoticz/plugins
-git clone https://github.com/Rouzax/luxtronik-domoticz-plugin-v2.git luxtronikex
+git clone https://github.com/Rouzax/luxtronik-domoticz-plugin.git luxtronikex
 ```
 
 ### Final step: restart and enable
@@ -477,6 +477,8 @@ The new plugin uses a different key (`luxtronikex` vs `luxtronik`), allowing bot
 
 See [`migration/README.md`](migration/README.md) for detailed instructions and SQL scripts.
 
+The `migration/` folder is not included in the release zip or the `dist` branch, so download it from the repository's `main` branch first. The commands below assume it sits in the current directory.
+
 ### Quick Migration
 
 ```bash
@@ -489,7 +491,7 @@ sudo systemctl start domoticz
 
 # 3. Migrate (auto-detects both plugins)
 sudo systemctl stop domoticz
-sqlite3 domoticz.db < plugins/luxtronik-domoticz-plugin-v2/migration/migrate.sql
+sqlite3 domoticz.db < migration/migrate.sql
 sudo systemctl start domoticz
 
 # 4. Verify graphs, then disable old plugin and rename new one
@@ -601,7 +603,3 @@ Building tools that solve my own problems and sharing them in the hope they solv
 - COP logging setting check with user notification
 - Enhanced debug levels (Basic, Device, Comms, Verbose)
 - SQL migration scripts for historical data transfer
-
-### Previous Versions
-See the original repository for earlier changelog entries.
-https://github.com/Rouzax/luxtronik-domoticz-plugin

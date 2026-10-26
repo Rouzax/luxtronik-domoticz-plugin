@@ -11,7 +11,7 @@
 -- BEFORE RUNNING:
 -- 1. STOP Domoticz: sudo systemctl stop domoticz
 -- 2. BACKUP database: cp domoticz.db domoticz.db.backup
--- 3. Run: sqlite3 domoticz.db < plugins/luxtronik-domoticz-plugin-v2/migration/migrate.sql
+-- 3. Run: sqlite3 domoticz.db < migration/migrate.sql
 -- 4. Restart: sudo systemctl start domoticz
 -- ============================================================================
 

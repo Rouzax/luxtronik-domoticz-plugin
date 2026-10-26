@@ -56,7 +56,7 @@ def test_persist_merges_names_and_update_notified(lux):
 
 
 def test_announce_once_per_version(lux):
-    url = "https://github.com/Rouzax/luxtronik-domoticz-plugin-v2/releases/tag/v2.4.0"
+    url = "https://github.com/Rouzax/luxtronik-domoticz-plugin/releases/tag/v2.4.0"
     lux._updates.put(UpdateResult("2.4.0", url))
     lux._announce_updates()
     assert len(stub.calls["notification"]) == 1
