@@ -163,6 +163,8 @@ Temperatures and pressures inside the refrigerant circuit, plus derived values t
 | 173 | Discharge headroom | Margin between hot gas temperature and the controller's hot gas limit, K. **Gated** |
 | 174 | Compression ratio | High-side divided by low-side pressure (absolute). **Gated** |
 
+![Compressor and refrigerant device cards in Domoticz](assets/refrigerant.png)
+
 ### Reading the diagnostics
 
 **Refrigerant lift** is the temperature gap the compressor has to bridge, and the main driver of COP: the smaller the lift, the higher the COP. It rises with hotter supply water (hot water mode, a steeper heating curve) and with colder brine. A lift that creeps up over a season at the same outside temperature points at a colder source or a higher supply temperature than needed.
