@@ -2,6 +2,8 @@
 
 These scripts migrate historical data from the legacy Luxtronik plugin (key `luxtronik`) to the DomoticzEx version (key `luxtronikex`).
 
+The same instructions, with more context, are on the docs site: [Migrating from v1](https://rouzax.github.io/luxtronik-domoticz-plugin/migration/).
+
 ## Prerequisites
 
 - Both plugins installed and configured
