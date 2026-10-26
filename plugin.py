@@ -1000,6 +1000,13 @@ def onCommand(DeviceID: str, Unit: int, Command: str, Level: int, Color: str) ->
                 available_writes=_plugin_ref.available_writes,
             )
 
+            if value is None:
+                _logger.error(
+                    f"WRITE BLOCKED: {Command} level {Level} is not a valid option "
+                    f"(spec_id={spec.spec_id})"
+                )
+                return
+
             # Get address from spec
             address = spec.address
             if isinstance(address, list):
