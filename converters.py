@@ -24,6 +24,10 @@ _monotonic = time.monotonic
 # Type aliases for converter return types
 DataStore = Dict[str, List[int]]  # command -> data_list
 ConvertResult = Dict[str, Any]  # {'nValue': ..., 'sValue': ...}
+
+# Data store key holding the compressor's own measured power, kept by pump power
+# compensation before it adds the estimated pump power to POWER_TOTAL.
+COMPRESSOR_POWER_KEY = "COMPRESSOR_POWER"
 GatedResult = Tuple[Optional[ConvertResult], Optional[str]]  # (result, gate_reason)
 
 
@@ -410,7 +414,10 @@ class TextStateConverter(DataConverter):
                 return {"nValue": 0, "sValue": translate("Cooling")}
 
             power_idx, power_threshold = config
-            current_power = float(data_list[power_idx])
+            # Idle means the compressor uses no power. Pump power compensation adds the
+            # circulation pumps to POWER_TOTAL, so prefer the compressor's own reading.
+            measured = data_store.get(COMPRESSOR_POWER_KEY)
+            current_power = float(measured[0] if measured else data_list[power_idx])
             current_mode = data_list[address]
 
             if current_power <= power_threshold:
