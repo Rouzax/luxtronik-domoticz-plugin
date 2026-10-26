@@ -17,14 +17,17 @@ from converters import (
     CompressionRatioConverter,
     COPCalculatorConverter,
     DischargeHeadroomConverter,
+    FirmwareVersionConverter,
     FloatConverter,
     FreqHeadroomConverter,
     GatedFloatConverter,
     GatedTempDiffConverter,
+    HeatpumpTypeConverter,
     InstantPowerConverter,
     InstantPowerSplitConverter,
     IntegerValueConverter,
     LastCycleConverter,
+    LastFaultConverter,
     LevelWithDividerConverter,
     NumberConverter,
     RuntimeHoursConverter,
@@ -54,6 +57,9 @@ class DeviceFactory:
     _gated_temp_diff_converter = GatedTempDiffConverter()
     _steady_temp_diff_converter = GatedTempDiffConverter(passive_cooling_bypass=False)
     _command_to_number = CommandToNumberConverter()
+    _last_fault_converter = LastFaultConverter()
+    _firmware_converter = FirmwareVersionConverter()
+    _heatpump_type_converter = HeatpumpTypeConverter()
     _runtime_hours_converter = RuntimeHoursConverter()
     _integer_value_converter = IntegerValueConverter()
     _boolean_switch_converter = BooleanSwitchConverter()
@@ -361,6 +367,49 @@ class DeviceFactory:
             read_converter=cls._text_state_converter,
             read_args=([power_idx, power_threshold],),
             device_params=params,
+        )
+
+    @classmethod
+    def create_last_fault_device(
+        cls, unit_id: int, spec_id: str, code_address: int, time_address: int, used: int = 1
+    ) -> DeviceSpec:
+        """Text device with the controller's newest stored fault, decoded."""
+        return DeviceSpec(
+            unit_id=unit_id,
+            spec_id=spec_id,
+            command="READ_CALCUL",
+            address=code_address,
+            read_converter=cls._last_fault_converter,
+            read_args=(time_address,),
+            device_params={"TypeName": "Text", "Used": used},
+        )
+
+    @classmethod
+    def create_firmware_device(
+        cls, unit_id: int, spec_id: str, address: int, used: int = 0
+    ) -> DeviceSpec:
+        """Text device with the controller firmware version."""
+        return DeviceSpec(
+            unit_id=unit_id,
+            spec_id=spec_id,
+            command="READ_CALCUL",
+            address=address,
+            read_converter=cls._firmware_converter,
+            device_params={"TypeName": "Text", "Used": used},
+        )
+
+    @classmethod
+    def create_heatpump_type_device(
+        cls, unit_id: int, spec_id: str, address: int, used: int = 0
+    ) -> DeviceSpec:
+        """Text device with the heat pump type designation."""
+        return DeviceSpec(
+            unit_id=unit_id,
+            spec_id=spec_id,
+            command="READ_CALCUL",
+            address=address,
+            read_converter=cls._heatpump_type_converter,
+            device_params={"TypeName": "Text", "Used": used},
         )
 
     @classmethod

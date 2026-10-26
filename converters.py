@@ -4,6 +4,7 @@ Extracted from plugin.py. Does not import DomoticzEx or plugin.
 Shared runtime state is accessed via the context module.
 """
 
+import datetime
 import time
 from abc import ABC, abstractmethod
 from typing import Any, Dict, List, Optional, Tuple
@@ -11,6 +12,7 @@ from typing import Any, Dict, List, Optional, Tuple
 import context
 from addresses import ConfigLimits, LuxtronikAddress
 from context import DebugLevel
+from fault_codes import fault_message, heatpump_type
 
 # Patched in tests to drive the settling gate without waiting.
 _monotonic = time.monotonic
@@ -421,6 +423,66 @@ class TextStateConverter(DataConverter):
                 f"TextStateConverter error: {type(e).__name__}: {e}", DebugLevel.VERBOSE
             )
             return {"nValue": 0, "sValue": translate("Idle")}
+
+
+class LastFaultConverter(DataConverter):
+    """The controller's newest stored fault as '<code>: <message> (<local time>)'.
+
+    The fault time is a UTC epoch; it is shown in the local time of the Domoticz host.
+    """
+
+    def convert(
+        self, data_store: DataStore, command: str, address: int, time_address: int
+    ) -> Optional[ConvertResult]:
+        try:
+            data_list = data_store.get(command, [])
+            code = int(data_list[address])
+            if code <= 0:
+                return {"nValue": 0, "sValue": translate("No faults")}
+            message = fault_message(code, context.translator.language) or translate("Unknown fault")
+            text = f"{code}: {message}"
+            stamp = int(data_list[time_address])
+            if stamp > 0:
+                local = datetime.datetime.fromtimestamp(stamp)
+                text += f" ({local:%Y-%m-%d %H:%M})"
+            return {"nValue": 0, "sValue": text}
+        except (IndexError, TypeError, ValueError, OverflowError, OSError) as e:
+            context.logger.log(
+                f"LastFaultConverter error: {type(e).__name__}: {e}", DebugLevel.VERBOSE
+            )
+            return None
+
+
+class FirmwareVersionConverter(DataConverter):
+    """Controller firmware version, stored one character per address (e.g. 'V3.92.3')."""
+
+    LENGTH = 10
+
+    def convert(self, data_store: DataStore, command: str, address: int) -> Optional[ConvertResult]:
+        try:
+            data_list = data_store.get(command, [])
+            chars = data_list[address : address + self.LENGTH]
+            version = "".join(chr(c) for c in chars if 0 < c < 128).strip()
+            return {"nValue": 0, "sValue": version} if version else None
+        except (TypeError, ValueError) as e:
+            context.logger.log(
+                f"FirmwareVersionConverter error: {type(e).__name__}: {e}", DebugLevel.VERBOSE
+            )
+            return None
+
+
+class HeatpumpTypeConverter(DataConverter):
+    """Heat pump type code as its model designation, or 'Code <n>' when unknown."""
+
+    def convert(self, data_store: DataStore, command: str, address: int) -> Optional[ConvertResult]:
+        try:
+            code = int(data_store.get(command, [])[address])
+            return {"nValue": 0, "sValue": heatpump_type(code) or f"Code {code}"}
+        except (IndexError, TypeError, ValueError) as e:
+            context.logger.log(
+                f"HeatpumpTypeConverter error: {type(e).__name__}: {e}", DebugLevel.VERBOSE
+            )
+            return None
 
 
 class COPCalculatorConverter(SteadyStateGateMixin, DataConverter):

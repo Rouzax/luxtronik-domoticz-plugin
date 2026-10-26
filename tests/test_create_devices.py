@@ -4,8 +4,10 @@ import domoticz_stub as stub
 import pytest
 
 import plugin
+from device_specs_table import build_device_specs
 
 REFUSED = {171, 172}
+TOTAL = len(build_device_specs())
 
 
 @pytest.fixture
@@ -32,7 +34,7 @@ def _refuse(monkeypatch, units):
 def test_all_units_created_when_accepted(lux):
     lux.create_devices()
     units = stub.Devices["luxtronikex_hw18"].Units
-    assert len(units) == 68
+    assert len(units) == TOTAL
     assert not any("could not create" in m.lower() for m in stub.calls["status"])
 
 
@@ -42,7 +44,7 @@ def test_refused_units_are_not_reported_as_created(lux, monkeypatch):
     lux.create_devices()
 
     units = stub.Devices["luxtronikex_hw18"].Units
-    assert REFUSED.isdisjoint(units) and len(units) == 68 - len(REFUSED)
+    assert REFUSED.isdisjoint(units) and len(units) == TOTAL - len(REFUSED)
     # Names are only recorded for devices that exist.
     for unit_id in REFUSED:
         assert f"luxtronikex_hw18:{unit_id}" not in lux._auto_names
