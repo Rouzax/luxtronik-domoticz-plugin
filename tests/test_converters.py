@@ -7,8 +7,6 @@ All converter outputs were captured from the real implementation before being
 asserted here (characterization testing, not specification testing).
 """
 
-import math
-
 import pytest
 
 import context
@@ -20,12 +18,45 @@ from addresses import ConfigLimits
 # =============================================================================
 
 
+HEARTBEAT_S = 20
+
+
+class FakeClock:
+    """Monotonic clock for the settling gate. By default every read moves time forward one
+    heartbeat, so N gate checks span N heartbeats; tests that need several checks within one
+    heartbeat set ``tick = 0`` and call ``advance()`` themselves."""
+
+    def __init__(self):
+        self.now = 1000.0
+        self.tick = float(HEARTBEAT_S)
+
+    def __call__(self):
+        current = self.now
+        self.now += self.tick
+        return current
+
+    def advance(self, seconds):
+        self.now += seconds
+
+
+@pytest.fixture(autouse=True)
+def clock(monkeypatch):
+    fake = FakeClock()
+    monkeypatch.setattr(converters, "_monotonic", fake)
+    return fake
+
+
 @pytest.fixture(autouse=True)
 def _ctx():
     """Inject a clean, deterministic context for every test."""
     context.logger = context._NullLogger()
     context.translator = context._PassthroughTranslator()
-    context.heartbeat_interval = 20
+    context.heartbeat_interval = HEARTBEAT_S
+
+
+def _steady_calls():
+    """Gate checks, one per heartbeat, until SETTLING_SECONDS have elapsed since the first."""
+    return ConfigLimits.SETTLING_SECONDS // HEARTBEAT_S + 1
 
 
 def ds(calc):
@@ -113,19 +144,9 @@ class TestTempDiffConverter:
 
 
 class TestSteadyStateGateMixin:
-    """Pin current SteadyStateGateMixin.check_steady_state behavior.
-
-    PINNED -- _steady_count flyweight behavior:
-      _steady_count is declared as a class attribute on SteadyStateGateMixin
-      (class-level default = 0). Python turns it into a per-instance attribute on
-      the first write (self._steady_count = ...). This means:
-        - Each fresh instance reads the class-level default (0) until first write.
-        - Different instances do NOT share state once either has written to it.
-        - The class attribute itself stays at 0 permanently (no instance write
-          ever changes it).
-      This is CURRENT behavior, not a design goal. Do not "fix" this here;
-      doing so could change settling behavior in the live plugin.
-    """
+    """The settling gate measures elapsed time since the compressor first reached its minimum
+    target frequency, so it gives the same answer however many devices share one converter
+    instance or how often they ask within a heartbeat."""
 
     def _make_mixin(self):
         """Return a fresh concrete SteadyStateGateMixin instance."""
@@ -136,7 +157,7 @@ class TestSteadyStateGateMixin:
 
         return _Concrete()
 
-    # --- four gate states ---
+    # --- gate states ---
 
     def test_idle_when_min_freq_zero(self):
         m = self._make_mixin()
@@ -155,53 +176,48 @@ class TestSteadyStateGateMixin:
         reason = m.check_steady_state(ds({231: 60, 237: 50}))
         assert reason is not None
         assert "settling" in reason
-        assert m._steady_count == 1
 
-    def test_gate_passes_after_required_heartbeats(self):
+    def test_gate_passes_once_settling_seconds_elapsed(self, clock):
         m = self._make_mixin()
         store = ds({231: 60, 237: 50})
-        required = math.ceil(ConfigLimits.SETTLING_SECONDS / context.heartbeat_interval)
-        assert required == 6  # sanity-check fixture setup
-        # The 5th call is still settling
-        for _ in range(required - 1):
-            reason = m.check_steady_state(store)
-        assert reason is not None and "settling" in reason
-        # The 6th call opens the gate
-        reason = m.check_steady_state(store)
-        assert reason is None
+        clock.tick = 0
+        assert m.check_steady_state(store) is not None  # steady from here
+        clock.advance(ConfigLimits.SETTLING_SECONDS - 1)
+        assert "settling" in m.check_steady_state(store)
+        clock.advance(1)
+        assert m.check_steady_state(store) is None
 
-    # --- counter resets ---
-
-    def test_idle_resets_counter(self):
+    def test_shared_instance_is_not_sped_up_by_more_devices(self, clock):
+        # Several devices share one converter and each checks the gate every heartbeat.
+        # The wait must still be SETTLING_SECONDS, not divided by the number of devices.
         m = self._make_mixin()
-        for _ in range(3):
-            m.check_steady_state(ds({231: 60, 237: 50}))
-        assert m._steady_count == 3
+        store = ds({231: 60, 237: 50})
+        clock.tick = 0
+        for _ in range(ConfigLimits.SETTLING_SECONDS // HEARTBEAT_S):
+            for _device in range(5):
+                assert m.check_steady_state(store) is not None
+            clock.advance(HEARTBEAT_S)
+        assert m.check_steady_state(store) is None
+
+    # --- resets ---
+
+    def test_idle_restarts_the_wait(self, clock):
+        m = self._make_mixin()
+        store = ds({231: 60, 237: 50})
+        clock.tick = 0
+        m.check_steady_state(store)
+        clock.advance(ConfigLimits.SETTLING_SECONDS)
         m.check_steady_state(ds({231: 0, 237: 0}))
-        assert m._steady_count == 0
+        assert "settling" in m.check_steady_state(store)
 
-    def test_ramping_resets_counter(self):
+    def test_ramping_restarts_the_wait(self, clock):
         m = self._make_mixin()
-        for _ in range(3):
-            m.check_steady_state(ds({231: 60, 237: 50}))
-        assert m._steady_count == 3
-        m.check_steady_state(ds({231: 30, 237: 50}))
-        assert m._steady_count == 0
-
-    # --- PINNED: class-level default, per-instance after first write ---
-
-    def test_instances_do_not_share_counter(self):
-        """PINNED: class-level _steady_count becomes per-instance on first write."""
-        m1 = self._make_mixin()
-        m2 = self._make_mixin()
         store = ds({231: 60, 237: 50})
-        for _ in range(3):
-            m1.check_steady_state(store)
-        assert m1._steady_count == 3
-        # m2 has never written; reads class-level default = 0
-        assert m2._steady_count == 0
-        assert "_steady_count" not in m2.__dict__  # still class attr
-        assert converters.SteadyStateGateMixin._steady_count == 0  # class attr unchanged
+        clock.tick = 0
+        m.check_steady_state(store)
+        clock.advance(ConfigLimits.SETTLING_SECONDS)
+        m.check_steady_state(ds({231: 30, 237: 50}))
+        assert "settling" in m.check_steady_state(store)
 
 
 # =============================================================================
@@ -232,10 +248,10 @@ class TestGatedFloatConverter:
         assert "settling" in reason
 
     def test_gate_open_returns_value_and_none_reason(self):
-        """PINNED: after 6 heartbeats returns ({'sValue': '7.92'}, None)."""
+        """After the settling time returns ({'sValue': '7.92'}, None)."""
         c = converters.GatedFloatConverter()
         store = ds({231: 60, 237: 50, 180: 792})
-        required = math.ceil(ConfigLimits.SETTLING_SECONDS / context.heartbeat_interval)
+        required = _steady_calls()
         for _ in range(required):
             result, reason = c.convert(store, "READ_CALCUL", 180, 100)
         assert result == {"sValue": "7.92"}
@@ -279,7 +295,7 @@ class TestGatedTempDiffConverter:
     def test_gate_open_returns_diff_and_none_reason(self):
         c = converters.GatedTempDiffConverter()
         store = ds({231: 60, 237: 50, 10: 250, 11: 230})
-        required = math.ceil(ConfigLimits.SETTLING_SECONDS / context.heartbeat_interval)
+        required = _steady_calls()
         for _ in range(required):
             result, reason = c.convert(store, "READ_CALCUL", [10, 11], 10)
         assert result == {"sValue": "2.0"}
@@ -298,7 +314,7 @@ class TestCOPCalculatorConverter:
 
     def _advance_cop_to_steady(self, c, store):
         """Advance COPCalculatorConverter c through 6 heartbeats with `store`."""
-        required = math.ceil(ConfigLimits.SETTLING_SECONDS / context.heartbeat_interval)
+        required = _steady_calls()
         for _ in range(required):
             c.convert(store, "READ_CALCUL", 0, [257, 268])
 
@@ -386,7 +402,7 @@ class TestCOPCalculatorConverter:
 
 class TestCapacityConverter:
     def _advance_cap_to_steady(self, c, store):
-        required = math.ceil(ConfigLimits.SETTLING_SECONDS / context.heartbeat_interval)
+        required = _steady_calls()
         for _ in range(required):
             c.convert(store, "READ_CALCUL", 0, [231, 238])
 
@@ -679,7 +695,7 @@ class TestLevelWithDividerConverter:
 # =============================================================================
 class TestCompressionRatioConverter:
     def _advance(self, c, store):
-        required = math.ceil(ConfigLimits.SETTLING_SECONDS / context.heartbeat_interval)
+        required = _steady_calls()
         for _ in range(required - 1):
             c.convert(store, "READ_CALCUL", [180, 181])
 
@@ -704,7 +720,7 @@ class TestCompressionRatioConverter:
 # =============================================================================
 class TestDischargeHeadroomConverter:
     def _advance(self, c, store):
-        required = math.ceil(ConfigLimits.SETTLING_SECONDS / context.heartbeat_interval)
+        required = _steady_calls()
         for _ in range(required - 1):
             c.convert(store, "READ_CALCUL", [252, 14], 10)
 

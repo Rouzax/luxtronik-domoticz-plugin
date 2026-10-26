@@ -201,7 +201,7 @@ Hours divided by starts gives the average run length. Many short runs (frequent 
 
 ## Gated devices
 
-Gated devices only send a value while the compressor runs at or above the controller's minimum target speed, after a short settling period of up to 2 minutes. During idle, start-up and ramp-up they keep their last value instead of logging misleading readings.
+Gated devices only send a value while the compressor runs at or above the controller's minimum target speed, once it has done so for 2 minutes in a row. During idle, start-up and ramp-up they keep their last value instead of logging misleading readings.
 
 - Heating ΔT (63) and Source ΔT (102) also update during passive cooling, when the pumps run without the compressor and the temperature difference is still meaningful.
 - Refrigerant lift (171) and Condensing-supply ΔT (172) also update during passive cooling, although the compressor is off then. Read their values during passive cooling with care.

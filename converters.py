@@ -4,13 +4,16 @@ Extracted from plugin.py. Does not import DomoticzEx or plugin.
 Shared runtime state is accessed via the context module.
 """
 
-import math
+import time
 from abc import ABC, abstractmethod
 from typing import Any, Dict, List, Optional, Tuple
 
 import context
 from addresses import ConfigLimits, LuxtronikAddress
 from context import DebugLevel
+
+# Patched in tests to drive the settling gate without waiting.
+_monotonic = time.monotonic
 
 # =============================================================================
 # Data Converters (Strategy Pattern)
@@ -53,16 +56,19 @@ class SteadyStateGateMixin:
     gate signal. Returns a reason string if gated, None if gate passes.
 
     Gate Logic:
-    - If min_target_freq <= 0: System is idle, gate closed, counter resets
-    - If actual_freq < min_target_freq: System is ramping up, gate closed, counter resets
-    - If freq >= min_target: Increment counter; gate opens only after N consecutive
-      heartbeats where N = ceil(SETTLING_SECONDS / heartbeat_interval)
+    - If min_target_freq <= 0: System is idle, gate closed, the wait restarts
+    - If actual_freq < min_target_freq: System is ramping up, gate closed, the wait restarts
+    - If freq >= min_target: gate opens once SETTLING_SECONDS have elapsed since the
+      compressor first reached its minimum target frequency in this run
 
     The settling requirement ensures thermal equilibrium before trusting readings.
     Live data showed ~2-3 minutes needed for stabilization after compressor start.
     """
 
-    _steady_count: int = 0
+    # When the compressor first reached its minimum target frequency in the current run, or
+    # None while idle or ramping. Measured in elapsed time rather than gate checks because one
+    # converter instance is shared by several devices, each checking once per heartbeat.
+    _steady_since: Optional[float] = None
 
     def check_steady_state(self, data_store: DataStore) -> Optional[str]:
         """Check if compressor is at steady-state operating speed.
@@ -77,7 +83,7 @@ class SteadyStateGateMixin:
         if len(calc_data) <= max(
             LuxtronikAddress.COMPRESSOR_FREQ, LuxtronikAddress.COMPRESSOR_FREQ_MIN
         ):
-            self._steady_count = 0
+            self._steady_since = None
             return "insufficient data"
 
         try:
@@ -86,21 +92,21 @@ class SteadyStateGateMixin:
 
             # Idle state: min_target is 0
             if min_target_freq <= 0:
-                self._steady_count = 0
+                self._steady_since = None
                 return f"idle (freq={actual_freq:.0f} Hz, min_target=0)"
 
             # Startup ramp: actual hasn't reached minimum target yet
             if actual_freq < min_target_freq:
-                self._steady_count = 0
+                self._steady_since = None
                 return f"ramping (freq={actual_freq:.0f} Hz < {min_target_freq:.0f} Hz)"
 
-            # Frequency is at target -- count consecutive heartbeats
-            self._steady_count += 1
-            required = math.ceil(ConfigLimits.SETTLING_SECONDS / context.heartbeat_interval)
-
-            if self._steady_count < required:
+            now = _monotonic()
+            if self._steady_since is None:
+                self._steady_since = now
+            elapsed = now - self._steady_since
+            if elapsed < ConfigLimits.SETTLING_SECONDS:
                 return (
-                    f"settling ({self._steady_count}/{required} heartbeats, "
+                    f"settling ({elapsed:.0f}/{ConfigLimits.SETTLING_SECONDS} s, "
                     f"freq={actual_freq:.0f} Hz)"
                 )
 
@@ -108,7 +114,7 @@ class SteadyStateGateMixin:
             return None
 
         except (IndexError, TypeError, ValueError) as e:
-            self._steady_count = 0
+            self._steady_since = None
             return f"error checking frequency: {e}"
 
 
