@@ -247,6 +247,7 @@ class LuxtronikPlugin:
 
         # Multi-instance support: unique DeviceID per hardware
         device_id = self._device_id
+        refused: list[int] = []
 
         for spec in specs:
             unit_id = spec.unit_id  # Use explicit unit_id, not position
@@ -269,8 +270,12 @@ class LuxtronikPlugin:
             k = name_ownership.key(device_id, unit_id)
 
             if not domoticz_api.unit_exists(_devices(), device_id, unit_id):
-                # Create new unit and claim everything we just wrote.
+                # Create new unit and claim everything we just wrote. Domoticz refuses new
+                # units while "Accept new devices" is off, logging only its own error.
                 domoticz_api.create_unit(device_id, unit_id, full_name, spec.device_params)
+                if not domoticz_api.unit_exists(_devices(), device_id, unit_id):
+                    refused.append(unit_id)
+                    continue
                 name_ownership.claim(self._auto_names, k, "name", full_name)
                 created_desc = spec.device_params.get("Description")
                 if created_desc:
@@ -385,6 +390,12 @@ class LuxtronikPlugin:
                         DebugLevel.DEVICE,
                     )
 
+        if refused:
+            _logger.warning(
+                f"Domoticz did not accept {len(refused)} new device(s) (units "
+                f"{', '.join(map(str, refused))}). Allow new devices (Setup > Settings, or "
+                "'Allow for 5 minutes' in Setup > Hardware), then restart this plugin."
+            )
         _logger.log(f"Device creation complete: {len(specs)} devices", DebugLevel.BASIC)
 
     def update_device(self, unit_id: int, new_values: Dict[str, Any]) -> bool:
@@ -1002,7 +1013,7 @@ def onCommand(DeviceID: str, Unit: int, Command: str, Level: int, Color: str) ->
 
             if value is None:
                 _logger.error(
-                    f"WRITE BLOCKED: {Command} level {Level} is not a valid option "
+                    f"WRITE BLOCKED: command '{Command}' (level {Level}) is not a valid option "
                     f"(spec_id={spec.spec_id})"
                 )
                 return
