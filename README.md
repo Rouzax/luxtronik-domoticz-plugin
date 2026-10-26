@@ -107,6 +107,16 @@ Building tools that solve my own problems and sharing them in the hope they solv
 
 ## Changelog
 
+### Version 3.1.0
+- Added: Unit 203 "Last fault" shows the controller's newest stored fault as code, message and time (for example "790: Severe inverter fault (2022-07-15 13:18)"), in Dutch, German, Polish or English (French uses English). A new fault is also written to the log and sent once through every Domoticz notification system. See [Fault codes](https://rouzax.github.io/luxtronik-domoticz-plugin/fault-codes/).
+- Added: Unit 204 "Firmware" and Unit 205 "Heat pump type" (unused by default).
+- Changed: Working mode shows all eight controller states. An EVU lock now shows "EVU" instead of "Cooling", and defrost, external heating and active cooling no longer show "No requirement".
+- Fixed: gated devices waited about 40 seconds instead of 2 minutes after the compressor reached steady speed; the wait is now measured in time.
+- Fixed: Refrigerant lift (Unit 171) and Condensing-supply ΔT (Unit 172) updated during passive cooling, with the compressor off.
+- Fixed: a selector level that does not exist (for example from a script) was turned into Automatic or a neighbouring mode and written to the heat pump; it is now refused. The Cooling switch only writes for an exact On or Off command.
+- Fixed: when Domoticz refused new devices ("Accept new devices" off), the plugin still logged them as created; it now names them in one warning with how to allow them.
+- Docs: a documentation site at https://rouzax.github.io/luxtronik-domoticz-plugin/, linked from the hardware page; repository links point to the renamed repository.
+
 ### Version 3.0.0
 - Changed: the settings page is reorganised. Pump power compensation is chosen by heat pump model (WZSV 62, 92, 122, 162) with values from the WZSV manual, or Custom with four separate fields; Language defaults to "Same as Domoticz"; the update interval is a choice of 10, 15, 20 or 30 seconds (the maximum is now 30); invalid custom pump values are reported by field. Existing values keep working until the hardware page is next saved, and the plugin lists them in the log and in a one-time notification; choose them again before saving (see [Upgrading from 2.2.x or older](https://rouzax.github.io/luxtronik-domoticz-plugin/install/#upgrading-from-22x-or-older)).
 - Added: daily update check with a new **Update check** setting (Automatic, Stable releases only, Including betas, Off); a newer release is announced once in the log and through every Domoticz notification system.
