@@ -42,7 +42,7 @@ Domoticz repeats the last received value every 5 minutes by default, also while 
 
 ## COP never updates
 
-- **The compressor has only just started.** COP only updates after a short settling period of up to 2 minutes at steady speed.
+- **The compressor has only just started.** COP only updates after 2 minutes at steady speed.
 - **COP heating and COP DHW only update in their own mode.** COP DHW stays unchanged during heating and the other way round.
 - **No COP during passive cooling.**
 - **The Max COP value filters the readings.** If real readings are above the [Max COP value](settings.md#max-cop-value), they are discarded; raise it, or set it to 0 to turn the filter off. With debug level **All**, the log names the reason for every skipped reading.
