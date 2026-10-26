@@ -396,7 +396,10 @@ class LuxtronikPlugin:
                 f"{', '.join(map(str, refused))}). Allow new devices (Setup > Settings, or "
                 "'Allow for 5 minutes' in Setup > Hardware), then restart this plugin."
             )
-        _logger.log(f"Device creation complete: {len(specs)} devices", DebugLevel.BASIC)
+        _logger.log(
+            f"Device creation complete: {len(specs) - len(refused)} of {len(specs)} devices",
+            DebugLevel.BASIC,
+        )
 
     def update_device(self, unit_id: int, new_values: Dict[str, Any]) -> bool:
         """Update a single device with optimized tracking.

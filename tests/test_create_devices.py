@@ -50,4 +50,4 @@ def test_refused_units_are_not_reported_as_created(lux, monkeypatch):
     warnings = [m for m in stub.calls["status"] if m.startswith("Warning:")]
     assert len(warnings) == 1
     assert "171" in warnings[0] and "172" in warnings[0]
-    assert "Accept new devices" in warnings[0] or "new devices" in warnings[0]
+    assert "new devices" in warnings[0]
