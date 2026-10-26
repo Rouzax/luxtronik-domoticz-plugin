@@ -18,7 +18,7 @@ import pytest
 
 import plugin
 from addresses import LuxtronikAddress, SocketCommand
-from converters import CommandToNumberConverter
+from converters import AvailableWritesConverter, CommandToNumberConverter
 from device_spec import DeviceSpec, Field
 
 DEVICE_ID = "luxtronikex_hw18"
@@ -105,3 +105,45 @@ def test_unknown_unit_is_noop():
 
     plugin._plugin_ref.connection.execute_with_retry.assert_not_called()
     plugin._plugin_ref.update_all.assert_not_called()
+
+
+SELECTOR_UNIT = 10
+
+
+def _register_selector():
+    """Register the Heating mode selector (levels 0..40 -> controller values 0..4)."""
+    plugin._plugin_ref = MagicMock()
+    plugin._plugin_ref.available_writes = {
+        LuxtronikAddress.HEATING_MODE: Field("Heating mode", [0, 1, 2, 3, 4])
+    }
+    plugin._unit_specs[(DEVICE_ID, SELECTOR_UNIT)] = DeviceSpec(
+        unit_id=SELECTOR_UNIT,
+        spec_id="heating_mode",
+        command="READ_PARAMS",
+        address=LuxtronikAddress.HEATING_MODE,
+        read_converter=MagicMock(),
+        write_converter=AvailableWritesConverter(10, LuxtronikAddress.HEATING_MODE),
+    )
+
+
+def test_selector_level_writes_its_mode():
+    _register_selector()
+
+    plugin.onCommand(DEVICE_ID, SELECTOR_UNIT, "Set Level", 20, "")
+
+    plugin._plugin_ref.connection.execute_with_retry.assert_called_once_with(
+        SocketCommand.WRITE_PARAMS, LuxtronikAddress.HEATING_MODE, 2
+    )
+
+
+@pytest.mark.parametrize("level", [50, -10, 15, 5])
+def test_selector_level_that_is_not_a_level_writes_nothing(level):
+    # A level the selector does not have must never fall back to a valid mode:
+    # that would silently switch the heat pump to Automatic or a neighbouring mode.
+    _register_selector()
+
+    plugin.onCommand(DEVICE_ID, SELECTOR_UNIT, "Set Level", level, "")
+
+    plugin._plugin_ref.connection.execute_with_retry.assert_not_called()
+    messages = " ".join(str(c.args[0]) for c in plugin._logger.error.call_args_list)
+    assert "WRITE BLOCKED" in messages

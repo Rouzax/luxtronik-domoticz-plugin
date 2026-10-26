@@ -24,9 +24,7 @@ WRITE BLOCKED: Address 1234 not in allowed list
 
 The list is part of the plugin's code, not a setting, so nothing on the hardware page or in Domoticz can widen it. This protects the controller's configuration memory from accidental writes, for example by a script that sends a command to the wrong device.
 
-!!! warning "Selector levels from scripts"
-
-    A mode selector (units 10-12) that receives a level it does not have, for example from a script, logs an error and falls back to Automatic (Normal for DHW Power Mode), which it then writes to the heat pump. Choosing a level in the Domoticz interface cannot trigger this. Make sure scripts only send levels the selector shows.
+A mode selector (units 10-12) only accepts its own levels (0, 10, 20 and so on). A level it does not have, for example a wrong value sent by a script, is refused and logged with `WRITE BLOCKED`; nothing is sent to the heat pump.
 
 !!! note
 

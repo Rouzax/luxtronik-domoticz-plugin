@@ -64,7 +64,7 @@ If you still have the notification or log line from before that save ("Settings 
 Changing a mode or setpoint has no effect on the heat pump.
 
 - **The command went to a device that cannot write.** Only the control devices (units 10-16) write to the heat pump; commands to any other device are ignored on purpose. With a debug level that includes Comms, the log shows `No write handler for unit N`. See [Security](security.md#what-the-plugin-can-change-on-the-heat-pump).
-- **A setpoint value is outside the device's range**, for example a DHW target above 65 °C sent by a script. The log shows a line starting with `WRITE BLOCKED`. Use a value the device offers.
+- **The value is not one the device offers**, for example a DHW target above 65 °C, or a selector level the selector does not have, sent by a script. The log shows a line starting with `WRITE BLOCKED`. Use a value the device offers.
 
 Otherwise, set the debug level to **Basic + Comms** and try again; the log then shows whether the command reached the heat pump.
 

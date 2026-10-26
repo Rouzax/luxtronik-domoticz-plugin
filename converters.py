@@ -744,8 +744,8 @@ class WriteConverter(ABC):
     """Abstract base class for write converters."""
 
     @abstractmethod
-    def convert(self, **kwargs) -> int:
-        """Convert command to value for writing."""
+    def convert(self, **kwargs) -> Optional[int]:
+        """Convert a command to the value to write, or None when nothing may be written."""
         pass
 
 
@@ -773,17 +773,16 @@ class AvailableWritesConverter(WriteConverter):
         self.divider = divider
         self.writes_idx = writes_idx
 
-    def convert(self, available_writes: Dict, Level: int = 0, **kwargs) -> int:
+    def convert(self, available_writes: Dict, Level: int = 0, **kwargs) -> Optional[int]:
+        """The controller value for a selector level, or None when the level is not one of the
+        selector's levels. Never falls back to another option: a script sending a wrong level
+        would otherwise switch the heat pump to a mode nobody chose."""
         try:
             values = available_writes[self.writes_idx].get_val()
-            index = int(Level / self.divider)
-            if 0 <= index < len(values):
-                return values[index]
-            else:
-                context.logger.error(
-                    f"Level {Level} (index {index}) out of range for writes_idx {self.writes_idx}"
-                )
-                return values[0] if values else 0
+            index, remainder = divmod(Level, self.divider)
+            if remainder == 0 and 0 <= index < len(values):
+                return values[int(index)]
+            return None
         except (KeyError, IndexError, TypeError) as e:
             context.logger.error("AvailableWritesConverter error", exc=e)
-            return 0
+            return None
