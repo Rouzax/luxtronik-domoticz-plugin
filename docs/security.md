@@ -11,7 +11,7 @@ The plugin reads everything, but writes only the settings behind its control dev
 | 10 | Heating mode | Automatic, 2nd heat source, Party, Holidays, Off |
 | 11 | Hot water mode | Automatic, 2nd heat source, Party, Holidays, Off |
 | 12 | DHW Power Mode | Normal, Luxury |
-| 13 | Cooling | On or off |
+| 13 | Cooling | On or off (any other command is refused) |
 | 14 | Temp adjust | Heating curve offset, -5 to +5 °C in 0.5 °C steps |
 | 15 | DHW temp target | Hot water setpoint, 30 to 65 °C in 0.5 °C steps |
 | 16 | Room temp setpoint | 15 to 30 °C in 0.5 °C steps |
