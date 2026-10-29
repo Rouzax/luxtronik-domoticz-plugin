@@ -1201,6 +1201,118 @@ DEVICE_TRANSLATIONS: Dict[str, Dict[str, Dict[Language, str]]] = {
             Language.FRENCH: "Heures totales en mode refroidissement passif.\nChaleur rejetée au sol sans compresseur.",
         },
     },
+    "compressor_runtime_counter": {
+        "name": {
+            Language.ENGLISH: "Compressor run time",
+            Language.POLISH: "Czas sprężarki",
+            Language.DUTCH: "Compressor looptijd",
+            Language.GERMAN: "Verdichter Laufzeit",
+            Language.FRENCH: "Temps compresseur",
+        },
+        "description": {
+            Language.ENGLISH: "Time the compressor ran.\nToday's total on the card; the log shows it per day, week, month and year.",
+            Language.POLISH: "Czas pracy sprężarki.\nDzisiejsza suma na karcie; dziennik pokazuje ją na dzień, tydzień, miesiąc i rok.",
+            Language.DUTCH: "Tijd dat de compressor draaide.\nTotaal van vandaag op de kaart; de log toont het per dag, week, maand en jaar.",
+            Language.GERMAN: "Laufzeit des Verdichters.\nTagessumme auf der Karte; das Log zeigt sie pro Tag, Woche, Monat und Jahr.",
+            Language.FRENCH: "Temps de fonctionnement du compresseur.\nTotal du jour sur la carte; le journal l'affiche par jour, semaine, mois et année.",
+        },
+    },
+    "compressor_starts_counter": {
+        "name": {
+            Language.ENGLISH: "Compressor start counter",
+            Language.POLISH: "Licznik startów",
+            Language.DUTCH: "Compressor startteller",
+            Language.GERMAN: "Verdichter Startzähler",
+            Language.FRENCH: "Compteur démarrages",
+        },
+        "description": {
+            Language.ENGLISH: "Number of compressor starts. Many starts per day means short cycling.\nToday's total on the card; the log shows it per day, week, month and year.",
+            Language.POLISH: "Liczba startów sprężarki. Dużo startów dziennie oznacza krótkie cykle.\nDzisiejsza suma na karcie; dziennik pokazuje ją na dzień, tydzień, miesiąc i rok.",
+            Language.DUTCH: "Aantal compressorstarts. Veel starts per dag betekent pendelen.\nTotaal van vandaag op de kaart; de log toont het per dag, week, maand en jaar.",
+            Language.GERMAN: "Anzahl Verdichterstarts. Viele Starts pro Tag bedeuten Takten.\nTagessumme auf der Karte; das Log zeigt sie pro Tag, Woche, Monat und Jahr.",
+            Language.FRENCH: "Nombre de démarrages du compresseur. Beaucoup par jour indique des cycles courts.\nTotal du jour sur la carte; le journal l'affiche par jour, semaine, mois et année.",
+        },
+    },
+    "heating_runtime_counter": {
+        "name": {
+            Language.ENGLISH: "Heating run time",
+            Language.POLISH: "Czas grzania",
+            Language.DUTCH: "Looptijd verwarming",
+            Language.GERMAN: "Laufzeit Heizen",
+            Language.FRENCH: "Temps chauffage",
+        },
+        "description": {
+            Language.ENGLISH: "Time the heat pump ran for space heating.\nToday's total on the card; the log shows it per day, week, month and year.",
+            Language.POLISH: "Czas pracy pompy na ogrzewanie.\nDzisiejsza suma na karcie; dziennik pokazuje ją na dzień, tydzień, miesiąc i rok.",
+            Language.DUTCH: "Tijd dat de warmtepomp voor verwarming draaide.\nTotaal van vandaag op de kaart; de log toont het per dag, week, maand en jaar.",
+            Language.GERMAN: "Laufzeit der Wärmepumpe für die Heizung.\nTagessumme auf der Karte; das Log zeigt sie pro Tag, Woche, Monat und Jahr.",
+            Language.FRENCH: "Temps de fonctionnement pour le chauffage.\nTotal du jour sur la carte; le journal l'affiche par jour, semaine, mois et année.",
+        },
+    },
+    "dhw_runtime_counter": {
+        "name": {
+            Language.ENGLISH: "Hot water run time",
+            Language.POLISH: "Czas CWU",
+            Language.DUTCH: "Looptijd tapwater",
+            Language.GERMAN: "Laufzeit Warmwasser",
+            Language.FRENCH: "Temps ECS",
+        },
+        "description": {
+            Language.ENGLISH: "Time the heat pump ran for hot water.\nToday's total on the card; the log shows it per day, week, month and year.",
+            Language.POLISH: "Czas pracy pompy na ciepłą wodę.\nDzisiejsza suma na karcie; dziennik pokazuje ją na dzień, tydzień, miesiąc i rok.",
+            Language.DUTCH: "Tijd dat de warmtepomp voor tapwater draaide.\nTotaal van vandaag op de kaart; de log toont het per dag, week, maand en jaar.",
+            Language.GERMAN: "Laufzeit der Wärmepumpe für Warmwasser.\nTagessumme auf der Karte; das Log zeigt sie pro Tag, Woche, Monat und Jahr.",
+            Language.FRENCH: "Temps de fonctionnement pour l'eau chaude.\nTotal du jour sur la carte; le journal l'affiche par jour, semaine, mois et année.",
+        },
+    },
+    "backup_heater_runtime_counter": {
+        "name": {
+            Language.ENGLISH: "Backup heater run time",
+            Language.POLISH: "Czas grzałki",
+            Language.DUTCH: "Looptijd bijverwarming",
+            Language.GERMAN: "Laufzeit Zusatzheizung",
+            Language.FRENCH: "Temps appoint",
+        },
+        "description": {
+            Language.ENGLISH: "Time the first backup heater (ZWE1) was on.\nToday's total on the card; the log shows it per day, week, month and year.",
+            Language.POLISH: "Czas pracy pierwszej grzałki (ZWE1).\nDzisiejsza suma na karcie; dziennik pokazuje ją na dzień, tydzień, miesiąc i rok.",
+            Language.DUTCH: "Tijd dat de eerste bijverwarming (ZWE1) aan stond.\nTotaal van vandaag op de kaart; de log toont het per dag, week, maand en jaar.",
+            Language.GERMAN: "Laufzeit des ersten Zusatzwärmeerzeugers (ZWE1).\nTagessumme auf der Karte; das Log zeigt sie pro Tag, Woche, Monat und Jahr.",
+            Language.FRENCH: "Temps de fonctionnement du premier appoint (ZWE1).\nTotal du jour sur la carte; le journal l'affiche par jour, semaine, mois et année.",
+        },
+    },
+    "cooling_runtime_counter": {
+        "name": {
+            Language.ENGLISH: "Cooling run time",
+            Language.POLISH: "Czas chłodzenia",
+            Language.DUTCH: "Looptijd koeling",
+            Language.GERMAN: "Laufzeit Kühlen",
+            Language.FRENCH: "Temps refroidissement",
+        },
+        "description": {
+            Language.ENGLISH: "Time in passive cooling.\nToday's total on the card; the log shows it per day, week, month and year.",
+            Language.POLISH: "Czas chłodzenia pasywnego.\nDzisiejsza suma na karcie; dziennik pokazuje ją na dzień, tydzień, miesiąc i rok.",
+            Language.DUTCH: "Tijd in passieve koeling.\nTotaal van vandaag op de kaart; de log toont het per dag, week, maand en jaar.",
+            Language.GERMAN: "Zeit im passiven Kühlbetrieb.\nTagessumme auf der Karte; das Log zeigt sie pro Tag, Woche, Monat und Jahr.",
+            Language.FRENCH: "Temps en refroidissement passif.\nTotal du jour sur la carte; le journal l'affiche par jour, semaine, mois et année.",
+        },
+    },
+    "heatpump_runtime_counter": {
+        "name": {
+            Language.ENGLISH: "Heat pump run time",
+            Language.POLISH: "Czas pompy ciepła",
+            Language.DUTCH: "Looptijd warmtepomp",
+            Language.GERMAN: "Laufzeit Wärmepumpe",
+            Language.FRENCH: "Temps PAC",
+        },
+        "description": {
+            Language.ENGLISH: "Heat pump operating time as counted by the controller.\nToday's total on the card; the log shows it per day, week, month and year.",
+            Language.POLISH: "Czas pracy pompy ciepła według sterownika.\nDzisiejsza suma na karcie; dziennik pokazuje ją na dzień, tydzień, miesiąc i rok.",
+            Language.DUTCH: "Bedrijfstijd van de warmtepomp volgens de regelaar.\nTotaal van vandaag op de kaart; de log toont het per dag, week, maand en jaar.",
+            Language.GERMAN: "Betriebszeit der Wärmepumpe laut Regler.\nTagessumme auf der Karte; das Log zeigt sie pro Tag, Woche, Monat und Jahr.",
+            Language.FRENCH: "Temps de fonctionnement de la PAC selon le régulateur.\nTotal du jour sur la carte; le journal l'affiche par jour, semaine, mois et année.",
+        },
+    },
     # =========================================================================
     # GROUP 14: DIAGNOSTICS (Units 200-201)
     # =========================================================================

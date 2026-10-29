@@ -1,6 +1,6 @@
 # Devices
 
-The plugin creates **71 devices** in 14 groups. Each device has a fixed unit number that never changes, so scripts and dashboards that refer to a unit keep working across updates.
+The plugin creates its devices in 14 groups. Each device has a fixed unit number that never changes, so scripts and dashboards that refer to a unit keep working across updates.
 
 Device names below are the English names. With another language, the names follow that language; a name you changed yourself is always kept.
 
@@ -20,7 +20,7 @@ Device names below are the English names. With another language, the names follo
 | [Mixing circuits](#mixing-circuits) | 120-131 | Mixing circuit 1 and 2 | 4 |
 | [Compressor](#compressor) | 140-145 | Frequency, capacity, headroom | 6 |
 | [Refrigerant circuit](#refrigerant-circuit) | 160-174 | Refrigerant temperatures, pressures, diagnostics | 12 |
-| [Statistics](#statistics) | 180-185 | Runtime hours, starts, last cycle | 6 |
+| [Statistics](#statistics) | 180-192 | Run time and starts, totals and per day, week and month | 13 |
 | [Diagnostics](#diagnostics) | 200-205 | Faults, cooling release, controller info | 6 |
 
 Two labels are used in the tables:
@@ -188,8 +188,26 @@ Temperatures and pressures inside the refrigerant circuit, plus derived values t
 | 183 | Heating runtime | Total hours in heating mode (unused) |
 | 184 | DHW runtime | Total hours in hot water mode (unused) |
 | 185 | Cooling runtime | Total hours in cooling mode (unused) |
+| 186 | Compressor run time | Compressor run time per day, week, month and year |
+| 187 | Compressor start counter | Compressor starts per day, week, month and year |
+| 188 | Heating run time | Run time for space heating per period |
+| 189 | Hot water run time | Run time for hot water per period |
+| 190 | Backup heater run time | Time the first backup heater (ZWE1) was on, per period |
+| 191 | Cooling run time | Time in passive cooling per period (unused) |
+| 192 | Heat pump run time | Heat pump operating time per period (unused) |
 
 Hours divided by starts gives the average run length. Many short runs (frequent starts, short last cycles) wear the compressor faster than few long ones.
+
+### Run time per day, week and month
+
+Units 180 to 185 show lifetime totals, which only ever rise. Units 186 to 192 read the same controller totals but are Domoticz **counters**, so Domoticz works out the periods itself:
+
+- The card shows today's run time (or today's starts) and the lifetime total.
+- The device log has bar charts per day, week, month and year, for example how long the hot water ran each day this month, or on which days the backup heater came on.
+
+The run times are shown in **minutes** ("Today: 84 min"). On a Domoticz version that lets plugins set a counter's divider, the plugin creates them in **hours** instead ("Today: 1.4 h"). Either way the stored values are the same, so you can switch an existing device yourself: in **Setup → Devices**, edit the device and set **Counter Divider** to `60` and **Unit** to `h` for hours, or **Counter Divider** to `1` and **Unit** to `min` for minutes. The plugin sets the divider and unit only when it creates the device and never changes them afterwards.
+
+The counters start at the controller's lifetime total, so the first day's history begins when the plugin first created them; earlier days are not filled in.
 
 ## Diagnostics
 

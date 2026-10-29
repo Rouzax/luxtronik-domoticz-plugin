@@ -16,6 +16,7 @@ from converters import (
     CommandToNumberConverter,
     CompressionRatioConverter,
     COPCalculatorConverter,
+    CounterTotalConverter,
     DischargeHeadroomConverter,
     FirmwareVersionConverter,
     FloatConverter,
@@ -62,6 +63,8 @@ class DeviceFactory:
     _heatpump_type_converter = HeatpumpTypeConverter()
     _runtime_hours_converter = RuntimeHoursConverter()
     _integer_value_converter = IntegerValueConverter()
+    _minutes_total_converter = CounterTotalConverter(divisor=60)
+    _count_total_converter = CounterTotalConverter()
     _boolean_switch_converter = BooleanSwitchConverter()
     _capacity_converter = CapacityConverter()
     _last_cycle_converter = LastCycleConverter()
@@ -497,6 +500,42 @@ class DeviceFactory:
             read_converter=cls._runtime_hours_converter,
             read_args=(),
             device_params=params,
+        )
+
+    @classmethod
+    def create_total_counter_device(
+        cls,
+        unit_id: int,
+        spec_id: str,
+        address: int,
+        quantity: str,
+        used: int = 1,
+        seconds: bool = True,
+    ) -> DeviceSpec:
+        """A Domoticz counter (day/week/month/year history) fed with a controller total.
+
+        A total in seconds is stored as minutes: counters only hold whole numbers and a
+        plugin can only set the divider on Domoticz versions that support it, where the
+        device is created to show hours (divider 60) instead.
+        """
+        units = "min" if seconds else ""
+        params = {
+            "Type": 113,
+            "Subtype": 0,
+            "Switchtype": 3,
+            "Used": used,
+            "Image": 21,
+            "Options": {"ValueQuantity": quantity, "ValueUnits": units},
+        }
+        return DeviceSpec(
+            unit_id=unit_id,
+            spec_id=spec_id,
+            command="READ_CALCUL",
+            address=address,
+            read_converter=cls._minutes_total_converter if seconds else cls._count_total_converter,
+            read_args=(),
+            device_params=params,
+            divided_units=(60, "h") if seconds else None,
         )
 
     @classmethod

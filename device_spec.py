@@ -34,6 +34,8 @@ class DeviceSpec:
         device_params: Domoticz device creation parameters
         write_converter: Optional converter for writing data
         selector_options: Optional list of untranslated option keys for selector switches
+        divided_units: Optional counter (divider, ValueUnits) used when Domoticz can store
+            a divider
     """
 
     unit_id: int
@@ -45,3 +47,4 @@ class DeviceSpec:
     device_params: Dict[str, Any] = field(default_factory=dict)
     write_converter: Optional[WriteConverter] = None
     selector_options: Optional[List[str]] = None
+    divided_units: Optional[Tuple[int, str]] = None
