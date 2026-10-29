@@ -21,7 +21,7 @@ The plugin retries on every update, so it recovers on its own once the connectio
 
 ## A device is missing
 
-- **It is an unused device.** 24 of the 71 devices start hidden. See [Enabling unused devices](devices.md#enabling-unused-devices); the [Devices](devices.md) page marks which ones.
+- **It is an unused device.** Some devices start hidden. See [Enabling unused devices](devices.md#enabling-unused-devices); the [Devices](devices.md) page marks which ones.
 - **You deleted it.** The plugin creates missing devices when it starts. Restart the plugin (press **Update** on its hardware page, or restart Domoticz) and the device comes back, under the same unit number, but without its old history.
 - **Creation failed.** Look in the log right after the plugin starts for errors; set the debug level to **Basic** to see "Creating devices" and what follows.
 

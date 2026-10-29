@@ -276,7 +276,13 @@ class LuxtronikPlugin:
             if not domoticz_api.unit_exists(_devices(), device_id, unit_id):
                 # Create new unit and claim everything we just wrote. Domoticz refuses new
                 # units while "Accept new devices" is off, logging only its own error.
-                domoticz_api.create_unit(device_id, unit_id, full_name, spec.device_params)
+                params, divider = spec.device_params, None
+                # Only at creation: on an existing counter the divider and unit are the
+                # user's to change in the Edit dialog.
+                if spec.divided_units and domoticz_api.supports_counter_divider():
+                    divider, units = spec.divided_units
+                    params = {**params, "Options": {**params["Options"], "ValueUnits": units}}
+                domoticz_api.create_unit(device_id, unit_id, full_name, params, divider)
                 if not domoticz_api.unit_exists(_devices(), device_id, unit_id):
                     refused.append(unit_id)
                     continue

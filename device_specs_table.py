@@ -95,7 +95,8 @@ def build_device_specs() -> List[DeviceSpec]:
     Group 13: Statistics & Counters (180-199)
     ─────────────────────────────────────────
       180-185 : Runtime counters and cycle tracking
-      186-199 : Reserved for future statistics
+      186-192 : Run-time counters with day/week/month history
+      193-199 : Reserved for future statistics
 
     Group 14: Diagnostics (200-209)
     ───────────────────────────────
@@ -741,7 +742,34 @@ def build_device_specs() -> List[DeviceSpec]:
             used=0,
             image=21,
         ),
-        # Units 186-199: Reserved for future statistics
+        # Units 186-192: the same controller totals as Domoticz counters, so the log shows
+        # run time and starts per day, week, month and year
+        DeviceFactory.create_total_counter_device(
+            186, "compressor_runtime_counter", LuxtronikAddress.COMPRESSOR_RUNTIME, "Time"
+        ),
+        DeviceFactory.create_total_counter_device(
+            187,
+            "compressor_starts_counter",
+            LuxtronikAddress.COMPRESSOR_STARTS,
+            "Starts",
+            seconds=False,
+        ),
+        DeviceFactory.create_total_counter_device(
+            188, "heating_runtime_counter", LuxtronikAddress.HEATING_RUNTIME, "Time"
+        ),
+        DeviceFactory.create_total_counter_device(
+            189, "dhw_runtime_counter", LuxtronikAddress.DHW_RUNTIME, "Time"
+        ),
+        DeviceFactory.create_total_counter_device(
+            190, "backup_heater_runtime_counter", LuxtronikAddress.BACKUP_HEATER1_RUNTIME, "Time"
+        ),
+        DeviceFactory.create_total_counter_device(
+            191, "cooling_runtime_counter", LuxtronikAddress.COOLING_RUNTIME, "Time", used=0
+        ),
+        DeviceFactory.create_total_counter_device(
+            192, "heatpump_runtime_counter", LuxtronikAddress.HEATPUMP_RUNTIME, "Time", used=0
+        ),
+        # Units 193-199: Reserved for future statistics
         # ═══════════════════════════════════════════════════════════════════
         # GROUP 14: DIAGNOSTICS (Units 200-209)
         # Error tracking and status flags

@@ -44,6 +44,8 @@ class Unit:
         self.DeviceID = DeviceID
         self.Unit = Unit
         self.params = params
+        self.Options = dict(params.get("Options", {}))
+        self.Description = params.get("Description", "")
         self.nValue = 0
         self.sValue = ""
         self.updated = False

@@ -264,6 +264,29 @@ class IntegerValueConverter(DataConverter):
             return {"nValue": 0, "sValue": "0"}
 
 
+class CounterTotalConverter(DataConverter):
+    """A controller running total as a Domoticz counter value, in whole units of `divisor`.
+
+    Domoticz derives the per-day usage from the change in total, so a missing or zero
+    reading is skipped: sent as 0 it would look like a counter reset, and the next real
+    total would count as one day's usage.
+    """
+
+    def __init__(self, divisor: int = 1):
+        self.divisor = divisor
+
+    def convert(
+        self, data_store: DataStore, command: str, address: int, *args
+    ) -> Optional[ConvertResult]:
+        try:
+            total = int(data_store.get(command, [])[address]) // self.divisor
+        except (IndexError, TypeError, ValueError):
+            return None
+        if total <= 0:
+            return None
+        return {"nValue": 0, "sValue": str(total)}
+
+
 class BooleanSwitchConverter(DataConverter):
     """Converts boolean (0/1) value to switch state for read-only display.
 

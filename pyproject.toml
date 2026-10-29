@@ -20,7 +20,7 @@ per-file-ignores = { "plugin.py" = ["E501"], "translations.py" = ["E501"] }
 testpaths = ["tests"]
 # --cov-fail-under floor: about 1% below measured coverage. Ratchet up as coverage
 # grows (raise the floor in the same change that earns the gain).
-addopts = "-q --cov=. --cov-report=term-missing --cov-fail-under=71"
+addopts = "-q --cov=. --cov-report=term-missing --cov-fail-under=75"
 
 [tool.pyright]
 # Blocking gate: pre-commit runs pyright and it is green (0 errors). Kept at
