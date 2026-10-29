@@ -230,6 +230,27 @@ Gated devices only send a value while the compressor runs at or above the contro
 - Freq headroom (145) is not settled: it updates as soon as the compressor runs.
 - The COP devices have further conditions; see [COP accuracy](settings.md#cop-accuracy).
 
+## Health bars
+
+On Domoticz 2026.4 and newer, some cards show a coloured bar under the value: green is normal, amber is worth a look, red is outside a limit. The bar's position shows where the current value sits. A device only gets a bar when its limits come from the controller itself, the WZSV or Luxtronik manual, or Alpha Innotec; there are no guessed limits.
+
+| Unit | Device | Red | Amber | Green | Source |
+|------|--------|-----|-------|-------|--------|
+| 160 | Hot gas temp | from T-HG max | | below T-HG max | Your controller's own cut-off (faults 704/714), read live |
+| 60 | Heat supply temp | below 16 °C, and from Vorlauf max | | 16 °C up to Vorlauf max | Your controller's flow cut-off, read live; 16 °C is fault 732 in cooling |
+| 80 | DHW temp | above 65 °C | below 50 °C | 50 to 65 °C | Below 50 °C is the legionella growth range; 65 °C is the WZSV maximum with the electric heater |
+| 165 | Superheat | below 2 K | | from 2 K | Fault 765: superheat below 2 K for 5 minutes |
+| 50-52 | COP | below 1 | | from 1 | Below 1 the heat pump does worse than an electric heater |
+| 182 | Compressor last cycle | under 6 min | 6 to 30 min | from 30 min | Alpha Innotec: runs under about 6 minutes cost efficiency, 30 to 60 minutes is uncritical |
+
+What happens:
+
+- The plugin writes the bars at start-up, and again when a controller limit changes, for example when the installer changes T-HG max. It does not rewrite them on every update.
+- **Your own bars are kept.** If you change or remove a bar in the device's edit dialog, the plugin leaves that device's bar alone from then on. A device that already had a bar of yours before this version is not touched either.
+- On Domoticz before 2026.4 nothing changes: those versions cannot store a bar set by a plugin.
+
+There are deliberately no bars on the return temperature (during hot water it always runs far above the heating return limit), the brine temperatures (Domoticz draws an axis that crosses 0 °C from its centre, which makes the bar unreadable) and the source flow (the flow sensor reads below the manual's minimum in normal operation).
+
 ## Enabling unused devices
 
 Devices marked **unused** are created but hidden, to keep the dashboard tidy. To enable one:
