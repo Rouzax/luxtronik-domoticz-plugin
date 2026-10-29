@@ -105,6 +105,9 @@ class LuxtronikAddress:
     COOLING_ENABLED = 108
     DHW_POWER_MODE = 1052
     ROOM_TEMP_SETPOINT = 1148
+    # Controller limits in tenths, read-only here; used for the health bars
+    HOT_GAS_MAX_SETTING = 94  # ID_Einst_THGmax_akt - "T-HG max", faults 704/714
+    FLOW_MAX_SETTING = 149  # ID_Einst_TVLmax_akt - "Vorlauf max"
 
 
 # =============================================================================

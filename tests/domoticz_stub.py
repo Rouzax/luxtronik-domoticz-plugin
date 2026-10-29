@@ -46,15 +46,18 @@ class Unit:
         self.params = params
         self.Options = dict(params.get("Options", {}))
         self.Description = params.get("Description", "")
+        self.Color = ""
         self.nValue = 0
         self.sValue = ""
         self.updated = False
+        self.update_calls = []
 
     def Create(self):
         Devices.setdefault(self.DeviceID, _Device(self.DeviceID)).Units[self.Unit] = self
 
     def Update(self, **kwargs):
         self.updated = True
+        self.update_calls.append(kwargs)
 
 
 def Status(message):
