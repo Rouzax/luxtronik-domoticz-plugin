@@ -2,7 +2,7 @@
 Luxtronik Heat Pump Controller Plugin v2 - Refactored for DomoticzEx Framework
 Author: Rouzax, 2025 (Refactored)
 
-<plugin key="luxtronikex" name="Luxtronik Heat Pump Controller v2" author="Rouzax" version="3.1.0" externallink="https://github.com/Rouzax/luxtronik-domoticz-plugin">
+<plugin key="luxtronikex" name="Luxtronik Heat Pump Controller v2" author="Rouzax" version="3.2.0" externallink="https://github.com/Rouzax/luxtronik-domoticz-plugin">
     <description>
         <h2>Luxtronik Heat Pump Controller Plugin</h2><br/>
         <p>This plugin connects to Luxtronik-based heat pump controllers using socket communication.</p>
