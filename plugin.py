@@ -2,7 +2,7 @@
 Luxtronik Heat Pump Controller Plugin v2 - Refactored for DomoticzEx Framework
 Author: Rouzax, 2025 (Refactored)
 
-<plugin key="luxtronikex" name="Luxtronik Heat Pump Controller v2" author="Rouzax" version="3.1.0" externallink="https://github.com/Rouzax/luxtronik-domoticz-plugin">
+<plugin key="luxtronikex" name="Luxtronik Heat Pump Controller v2" author="Rouzax" version="3.2.0" externallink="https://github.com/Rouzax/luxtronik-domoticz-plugin">
     <description>
         <h2>Luxtronik Heat Pump Controller Plugin</h2><br/>
         <p>This plugin connects to Luxtronik-based heat pump controllers using socket communication.</p>
@@ -112,6 +112,7 @@ import datetime
 import queue
 from typing import Any, Dict, Optional, Tuple
 
+import bar_ranges
 import domoticz_api
 import name_ownership
 import update_check
@@ -187,6 +188,9 @@ class LuxtronikPlugin:
         # '<code>@<epoch>' of the newest controller fault already seen; None until first read.
         self._fault_seen: Optional[str] = None
         self._settings_notice_sent: bool = False
+        self._bars_supported: bool = False
+        # Bar payloads already handled this run, so an unchanged bar costs no device write.
+        self._bar_payloads: Dict[int, str] = {}
         self._plugin_version: str = ""
         self._updates: "queue.Queue[update_check.UpdateResult]" = queue.Queue()
         self._checker: Optional[update_check.UpdateChecker] = None
@@ -276,7 +280,13 @@ class LuxtronikPlugin:
             if not domoticz_api.unit_exists(_devices(), device_id, unit_id):
                 # Create new unit and claim everything we just wrote. Domoticz refuses new
                 # units while "Accept new devices" is off, logging only its own error.
-                domoticz_api.create_unit(device_id, unit_id, full_name, spec.device_params)
+                params, divider = spec.device_params, None
+                # Only at creation: on an existing counter the divider and unit are the
+                # user's to change in the Edit dialog.
+                if spec.divided_units and domoticz_api.supports_counter_divider():
+                    divider, units = spec.divided_units
+                    params = {**params, "Options": {**params["Options"], "ValueUnits": units}}
+                domoticz_api.create_unit(device_id, unit_id, full_name, params, divider)
                 if not domoticz_api.unit_exists(_devices(), device_id, unit_id):
                     refused.append(unit_id)
                     continue
@@ -538,8 +548,42 @@ class LuxtronikPlugin:
                 self.update_devices(command, data_store)
 
         self._check_new_fault(data_store)
+        self._sync_bar_ranges(data_store)
 
         _logger.log("Full update complete", DebugLevel.VERBOSE)
+
+    def _sync_bar_ranges(self, data_store: DataStore) -> None:
+        """Write each device's health bar when its limits change, unless the user owns the bar.
+
+        Domoticz only stores Color through Update(UpdateProperties=True). A bar the plugin never
+        wrote is taken over only while the field is empty, so bars drawn by hand survive.
+        """
+        if not self._bars_supported:
+            return
+        claimed = False
+        for unit_id in bar_ranges.RULES:
+            payload = bar_ranges.payload(unit_id, data_store)
+            if payload is None or self._bar_payloads.get(unit_id) == payload:
+                continue
+            self._bar_payloads[unit_id] = payload
+            if not domoticz_api.unit_exists(_devices(), self._device_id, unit_id):
+                continue
+            unit = domoticz_api.get_unit(_devices(), self._device_id, unit_id)
+            k = name_ownership.key(self._device_id, unit_id)
+            current = unit.Color
+            if not name_ownership.is_owned(
+                self._auto_names, k, "color", current, current == "", migrating=True
+            ):
+                continue
+            if current != payload:
+                unit.Color = payload
+                unit.Update(Log=False, UpdateProperties=True)
+                _logger.log(f"Device {unit_id} bar ranges updated", DebugLevel.DEVICE)
+            name_ownership.claim(self._auto_names, k, "color", payload)
+            claimed = True
+        if claimed:
+            self._names_persisted = True
+            self._persist()
 
     def _validate_heartbeat(self, requested: int) -> int:
         """Validate and clamp heartbeat interval to safe range.
@@ -739,6 +783,7 @@ class LuxtronikPlugin:
         try:
             cfg = read_plugin_config(_parameters())
             self._plugin_version = cfg.plugin_version
+            self._bars_supported = bar_ranges.supported(_parameters().get("DomoticzVersion", ""))
 
             # Setup debugging
             _logger.level = cfg.debug_level

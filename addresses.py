@@ -55,6 +55,8 @@ class LuxtronikAddress:
     MC2_TEMP_TARGET = 25
     COMPRESSOR_RUNTIME = 56  # ID_WEB_Zaehler_BetrZeitVD1 - seconds
     COMPRESSOR_STARTS = 57  # ID_WEB_Zaehler_BetrZeitImpVD1 - count
+    BACKUP_HEATER1_RUNTIME = 60  # ID_WEB_Zaehler_BetrZeitZWE1 - seconds
+    HEATPUMP_RUNTIME = 63  # ID_WEB_Zaehler_BetrZeitWP - seconds
     HEATING_RUNTIME = 64  # ID_WEB_Zaehler_BetrZeitHz - heating mode seconds
     DHW_RUNTIME = 65  # ID_WEB_Zaehler_BetrZeitBW - DHW mode seconds
     COOLING_RUNTIME = 66  # ID_WEB_Zaehler_BetrZeitKue - cooling mode seconds
@@ -103,6 +105,9 @@ class LuxtronikAddress:
     COOLING_ENABLED = 108
     DHW_POWER_MODE = 1052
     ROOM_TEMP_SETPOINT = 1148
+    # Controller limits in tenths, read-only here; used for the health bars
+    HOT_GAS_MAX_SETTING = 94  # ID_Einst_THGmax_akt - "T-HG max", faults 704/714
+    FLOW_MAX_SETTING = 149  # ID_Einst_TVLmax_akt - "Vorlauf max"
 
 
 # =============================================================================

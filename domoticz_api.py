@@ -50,8 +50,19 @@ def unit_exists(devices, device_id: str, unit_id: int) -> bool:
     return device_id in devices and unit_id in devices[device_id].Units
 
 
-def create_unit(device_id: str, unit_id: int, name: str, params: dict) -> Any:
+def supports_counter_divider() -> bool:
+    """Whether plugin Units can store a counter divider (Unit.Adjustment2). Older Domoticz
+    versions have no such attribute and keep the divider at its default of 1."""
+    return hasattr(Domoticz.Unit, "Adjustment2")
+
+
+def create_unit(
+    device_id: str, unit_id: int, name: str, params: dict, divider: Optional[int] = None
+) -> Any:
     unit = Domoticz.Unit(Name=name, DeviceID=device_id, Unit=unit_id, **params)
+    if divider is not None:
+        # Stored by Create() itself; setting it afterwards would need an extra Update.
+        unit.Adjustment2 = divider
     unit.Create()
     return unit
 
