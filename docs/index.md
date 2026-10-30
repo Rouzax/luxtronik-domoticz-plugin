@@ -77,7 +77,7 @@ The plugin talks to **Luxtronik 2.0/2.1 based controllers**. Many manufacturers 
 
 ## Screenshots
 
-Device cards from a real installation, in Domoticz with the Machinon theme.
+Device cards in Domoticz with the Machinon theme, with values from a real installation. The run-time cards show example values for one day.
 
 === "Power, heat and COP"
 
@@ -94,6 +94,14 @@ Device cards from a real installation, in Domoticz with the Machinon theme.
 === "Controls"
 
     ![Control devices: working mode, heating mode, hot water mode, DHW power mode, cooling, room temperature setpoint and hot water target](assets/controls.png)
+
+=== "Run time"
+
+    ![Run-time counters: compressor run time, compressor starts, heating, hot water and backup heater run time, each with today's value and the lifetime total](assets/runtime.png)
+
+=== "Health bars"
+
+    ![Health bars along the top of the hot gas, supply, hot water, superheat, COP and last cycle cards](assets/health-bars.png)
 
 ## Where to go next
 
