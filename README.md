@@ -11,6 +11,8 @@ Also published on the [Domoticz Forum](https://forum.domoticz.com/viewtopic.php?
 - **COP you can trust:** separate COP for heating, hot water and combined, reported only while the compressor runs steadily.
 - **Pump power compensation:** adds the estimated circulation and brine pump power to the compressor-only power reading, with presets for the Alpha Innotec WZSV models.
 - **Refrigerant diagnostics:** superheat, pressures, condensing temperature, refrigerant lift, discharge headroom and compression ratio.
+- **Run time per period:** compressor, heating, hot water and backup heater run time and compressor starts per day, week, month and year.
+- **Health bars:** on Domoticz 2026.4 and newer, key cards show a green/amber/red bar from the controller's own limits and the manuals.
 - **Safe controls:** modes and setpoints can be changed from Domoticz; every write is checked against a fixed allowlist.
 - **Stable devices:** device IDs are tied to the hardware entry, and names you change are never overwritten.
 - **Five languages:** English, Polish, Dutch, German and French.
@@ -110,6 +112,11 @@ Building tools that solve my own problems and sharing them in the hope they solv
 MIT, see [LICENSE](LICENSE).
 
 ## Changelog
+
+### Version 3.2.0
+- Added: Units 186-192 show run time and compressor starts as Domoticz counters, so the card shows today's value and the log has bars per day, week, month and year: compressor, compressor starts, heating, hot water and backup heater run time (cooling and heat pump run time start unused). Run times are in minutes; on a Domoticz that lets plugins set a counter divider they are created in hours. See [Run time per day, week and month](https://rouzax.github.io/luxtronik-domoticz-plugin/devices/#run-time-per-day-week-and-month).
+- Added: on Domoticz 2026.4 and newer, health bars on hot gas, supply temperature, hot water, superheat, the three COP devices and the last compressor cycle. Every edge comes from the controller's own limits (read live), the WZSV or Luxtronik manual, or Alpha Innotec. Bars you change yourself are kept. See [Health bars](https://rouzax.github.io/luxtronik-domoticz-plugin/devices/#health-bars).
+- Docs: the plugin is licensed under MIT.
 
 ### Version 3.1.0
 - Added: Unit 203 "Last fault" shows the controller's newest stored fault as code, message and time (for example "790: Severe inverter fault (2022-07-15 13:18)"), in Dutch, German, Polish or English (French uses English). A new fault is also written to the log and sent once through every Domoticz notification system. See [Fault codes](https://rouzax.github.io/luxtronik-domoticz-plugin/fault-codes/).
