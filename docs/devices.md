@@ -200,6 +200,8 @@ Hours divided by starts gives the average run length. Many short runs (frequent 
 
 ### Run time per day, week and month
 
+![Run-time counters showing today's run time large and the lifetime total below, for the compressor, compressor starts, heating, hot water and the backup heater](assets/runtime.png)
+
 Units 180 to 185 show lifetime totals, which only ever rise. Units 186 to 192 read the same controller totals but are Domoticz **counters**, so Domoticz works out the periods itself:
 
 - The card shows today's run time (or today's starts) and the lifetime total.
@@ -232,7 +234,9 @@ Gated devices only send a value while the compressor runs at or above the contro
 
 ## Health bars
 
-On Domoticz 2026.4 and newer, some cards show a coloured bar under the value: green is normal, amber is worth a look, red is outside a limit. The bar's position shows where the current value sits. A device only gets a bar when its limits come from the controller itself, the WZSV or Luxtronik manual, or Alpha Innotec; there are no guessed limits.
+On Domoticz 2026.4 and newer, some cards show a coloured bar (under the title in the standard theme, along the top edge of the card in Machinon): green is normal, amber is worth a look, red is outside a limit. The bar's position shows where the current value sits. A device only gets a bar when its limits come from the controller itself, the WZSV or Luxtronik manual, or Alpha Innotec; there are no guessed limits.
+
+![Hot gas, supply, hot water, superheat, COP and last cycle cards, each with a coloured bar along the top edge](assets/health-bars.png)
 
 | Unit | Device | Red | Amber | Green | Source |
 |------|--------|-----|-------|-------|--------|
