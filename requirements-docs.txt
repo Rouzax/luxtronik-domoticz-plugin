@@ -2,7 +2,7 @@
 # build never pulls the dev toolchain. Every package is pinned exactly,
 # including zensical's own dependencies, so CI builds with the same set
 # that was checked locally.
-zensical==0.0.71
+zensical==0.0.72
 click==8.5.0
 deepmerge==3.0.1
 jinja2==3.1.6
